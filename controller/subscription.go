@@ -6,6 +6,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/model"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/QuantumNous/new-api/setting/ratio_setting"
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -19,6 +20,32 @@ type SubscriptionPlanDTO struct {
 
 type BillingPreferenceRequest struct {
 	BillingPreference string `json:"billing_preference"`
+}
+
+func normalizeSubscriptionCurrency(currency string) string {
+	switch strings.ToUpper(strings.TrimSpace(currency)) {
+	case "CNY":
+		return "CNY"
+	default:
+		return "USD"
+	}
+}
+
+func subscriptionEpayMoney(plan *model.SubscriptionPlan) float64 {
+	if plan == nil {
+		return 0
+	}
+	if normalizeSubscriptionCurrency(plan.Currency) == "CNY" {
+		return plan.PriceAmount
+	}
+	rate := operation_setting.USDExchangeRate
+	if rate <= 0 {
+		rate = operation_setting.Price
+	}
+	if rate <= 0 {
+		rate = 7.3
+	}
+	return plan.PriceAmount * rate
 }
 
 // ---- User APIs ----
@@ -126,10 +153,7 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "价格不能超过9999")
 		return
 	}
-	if req.Plan.Currency == "" {
-		req.Plan.Currency = "USD"
-	}
-	req.Plan.Currency = "USD"
+	req.Plan.Currency = normalizeSubscriptionCurrency(req.Plan.Currency)
 	if req.Plan.DurationUnit == "" {
 		req.Plan.DurationUnit = model.SubscriptionDurationMonth
 	}
@@ -189,10 +213,7 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		return
 	}
 	req.Plan.Id = id
-	if req.Plan.Currency == "" {
-		req.Plan.Currency = "USD"
-	}
-	req.Plan.Currency = "USD"
+	req.Plan.Currency = normalizeSubscriptionCurrency(req.Plan.Currency)
 	if req.Plan.DurationUnit == "" {
 		req.Plan.DurationUnit = model.SubscriptionDurationMonth
 	}

@@ -64,6 +64,15 @@ const resetPeriodOptions = [
   { value: 'custom', label: '自定义(秒)' },
 ];
 
+const currencyOptions = [
+  { value: 'USD', label: 'USD ($)' },
+  { value: 'CNY', label: 'CNY (¥)' },
+];
+
+function normalizeSubscriptionCurrency(currency) {
+  return String(currency || 'USD').toUpperCase() === 'CNY' ? 'CNY' : 'USD';
+}
+
 const AddEditSubscriptionModal = ({
   visible,
   handleClose,
@@ -108,7 +117,7 @@ const AddEditSubscriptionModal = ({
       title: p.title || '',
       subtitle: p.subtitle || '',
       price_amount: Number(p.price_amount || 0),
-      currency: 'USD',
+      currency: normalizeSubscriptionCurrency(p.currency),
       duration_unit: p.duration_unit || 'month',
       duration_value: Number(p.duration_value || 1),
       custom_seconds: Number(p.custom_seconds || 0),
@@ -152,7 +161,7 @@ const AddEditSubscriptionModal = ({
         plan: {
           ...values,
           price_amount: Number(values.price_amount || 0),
-          currency: 'USD',
+          currency: normalizeSubscriptionCurrency(values.currency),
           duration_value: Number(values.duration_value || 0),
           custom_seconds: Number(values.custom_seconds || 0),
           quota_reset_period: values.quota_reset_period || 'never',
@@ -343,11 +352,11 @@ const AddEditSubscriptionModal = ({
                     </Col>
 
                     <Col span={12}>
-                      <Form.Input
+                      <Form.Select
                         field='currency'
                         label={t('币种')}
-                        disabled
-                        extraText={t('由全站货币展示设置统一控制')}
+                        optionList={currencyOptions}
+                        extraText={t('订阅售价展示和易支付换算使用此币种')}
                       />
                     </Col>
 

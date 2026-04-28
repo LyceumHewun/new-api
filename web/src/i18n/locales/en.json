@@ -2435,6 +2435,7 @@
     "用户账户管理": "User account management",
     "用时/首字": "Time/first word",
     "由全站货币展示设置统一控制": "Controlled by the site-wide currency display settings",
+    "订阅售价展示和易支付换算使用此币种": "Used for subscription price display and Epay conversion",
     "由管理员分配，决定用户身份等级（如 default、vip）。": "Assigned by admin, determines user tier (e.g., default, vip).",
     "由订阅抵扣": "Deducted by subscription",
     "界面语言和其他个人偏好": "Interface language and other personal preferences",
