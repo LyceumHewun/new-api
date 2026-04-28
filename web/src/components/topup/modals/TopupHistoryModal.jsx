@@ -52,6 +52,8 @@ const PAYMENT_METHOD_MAP = {
   stripe: 'Stripe',
   creem: 'Creem',
   waffo: 'Waffo',
+  waffo_pancake: 'Waffo Pancake',
+  invite_rebate: '邀请返现',
   alipay: '支付宝',
   wxpay: '微信',
 };
@@ -152,6 +154,7 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
   };
 
   const isSubscriptionTopup = (record) => {
+    if (record?.record_type === 'invite_rebate') return false;
     const tradeNo = (record?.trade_no || '').toLowerCase();
     return Number(record?.amount || 0) === 0 && tradeNo.startsWith('sub');
   };
@@ -188,6 +191,17 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
         dataIndex: 'amount',
         key: 'amount',
         render: (amount, record) => {
+          if (record?.record_type === 'invite_rebate') {
+            return (
+              <span className='flex items-center gap-1'>
+                <Coins size={16} />
+                <Text>{amount}</Text>
+                <Tag color='green' shape='circle' size='small'>
+                  {t('邀请返现')}
+                </Tag>
+              </span>
+            );
+          }
           if (isSubscriptionTopup(record)) {
             return (
               <Tag color='purple' shape='circle' size='small'>
@@ -207,7 +221,12 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
         title: t('支付金额'),
         dataIndex: 'money',
         key: 'money',
-        render: (money) => <Text type='danger'>¥{money.toFixed(2)}</Text>,
+        render: (money, record) =>
+          record?.record_type === 'invite_rebate' ? (
+            <Text type='tertiary'>-</Text>
+          ) : (
+            <Text type='danger'>¥{Number(money || 0).toFixed(2)}</Text>
+          ),
       },
       {
         title: t('状态'),
@@ -224,7 +243,7 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
         key: 'action',
         render: (_, record) => {
           const actions = [];
-          if (record.status === 'pending') {
+          if (record.record_type !== 'invite_rebate' && record.status === 'pending') {
             actions.push(
               <Button
                 key="complete"
