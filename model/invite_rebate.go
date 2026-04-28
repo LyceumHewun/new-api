@@ -1,6 +1,7 @@
 package model
 
 import (
+	"errors"
 	"fmt"
 	"strconv"
 
@@ -81,6 +82,9 @@ func ApplyInviteRechargeRebateTx(tx *gorm.DB, payerID int, sourceType, sourceID,
 
 		var inviter User
 		if err := tx.Select("id", "inviter_id").Where("id = ?", inviterID).First(&inviter).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				break
+			}
 			return nil, err
 		}
 

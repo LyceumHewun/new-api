@@ -133,3 +133,22 @@ func TestApplyInviteRechargeRebateTx_Disabled(t *testing.T) {
 	assert.Equal(t, 0, affQuota)
 	assert.Equal(t, 0, affHistory)
 }
+
+func TestApplyInviteRechargeRebateTx_MissingInviterStopsChain(t *testing.T) {
+	truncateTables(t)
+	setInviteRebateSettingForTest(-1, []float64{0.5})
+
+	insertInviteRebateUser(t, 30, 999)
+
+	var records []InviteRebateRecord
+	require.NoError(t, DB.Transaction(func(tx *gorm.DB) error {
+		var err error
+		records, err = ApplyInviteRechargeRebateTx(tx, 30, PaymentProviderEpay, "order-1", "order-1", 1000)
+		return err
+	}))
+	require.Empty(t, records)
+
+	var count int64
+	require.NoError(t, DB.Model(&InviteRebateRecord{}).Count(&count).Error)
+	assert.EqualValues(t, 0, count)
+}
