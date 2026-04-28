@@ -90,6 +90,26 @@ func RecordLog(userId int, logType int, content string) {
 	}
 }
 
+func RecordLogWithQuotaAndOther(userId int, logType int, content string, quota int, other map[string]interface{}) {
+	if logType == LogTypeConsume && !common.LogConsumeEnabled {
+		return
+	}
+	username, _ := GetUsernameById(userId, false)
+	log := &Log{
+		UserId:    userId,
+		Username:  username,
+		CreatedAt: common.GetTimestamp(),
+		Type:      logType,
+		Content:   content,
+		Quota:     quota,
+		Other:     common.MapToJsonStr(other),
+	}
+	err := LOG_DB.Create(log).Error
+	if err != nil {
+		common.SysLog("failed to record log: " + err.Error())
+	}
+}
+
 // RecordLogWithAdminInfo 记录操作日志，并将管理员相关信息存入 Other.admin_info，
 func RecordLogWithAdminInfo(userId int, logType int, content string, adminInfo map[string]interface{}) {
 	if logType == LogTypeConsume && !common.LogConsumeEnabled {

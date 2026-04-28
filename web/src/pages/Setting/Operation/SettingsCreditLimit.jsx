@@ -26,6 +26,7 @@ import {
   showError,
   showSuccess,
   showWarning,
+  verifyJSON,
 } from '../../../helpers';
 
 export default function SettingsCreditLimit(props) {
@@ -36,12 +37,29 @@ export default function SettingsCreditLimit(props) {
     PreConsumedQuota: '',
     QuotaForInviter: '',
     QuotaForInvitee: '',
+    'invite_rebate_setting.count_limit': '0',
+    'invite_rebate_setting.chain_ratios': '[]',
     'quota_setting.enable_free_model_pre_consume': true,
   });
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
   function onSubmit() {
+    if (!verifyJSON(inputs['invite_rebate_setting.chain_ratios'] || '[]')) {
+      return showError(t('返现链条必须为 JSON 数组'));
+    }
+    const chainRatios = JSON.parse(
+      inputs['invite_rebate_setting.chain_ratios'] || '[]',
+    );
+    if (
+      !Array.isArray(chainRatios) ||
+      chainRatios.some((ratio) => Number(ratio) < 0 || Number.isNaN(Number(ratio)))
+    ) {
+      return showError(t('返现链条必须为非负数字数组'));
+    }
+    if (Number(inputs['invite_rebate_setting.count_limit']) < -1) {
+      return showError(t('返现次数必须为 -1、0 或正整数'));
+    }
     const updateArray = compareObjects(inputs, inputsRow);
     if (!updateArray.length) return showWarning(t('你似乎并没有修改什么'));
     const requestQueue = updateArray.map((item) => {
@@ -162,6 +180,41 @@ export default function SettingsCreditLimit(props) {
                     setInputs({
                       ...inputs,
                       QuotaForInvitee: String(value),
+                    })
+                  }
+                />
+              </Col>
+              <Col xs={24} sm={12} md={8} lg={8} xl={6}>
+                <Form.InputNumber
+                  label={t('充值返现次数')}
+                  field={'invite_rebate_setting.count_limit'}
+                  step={1}
+                  min={-1}
+                  extraText={t('-1 表示无限，0 表示关闭，正整数表示前 N 次充值返现')}
+                  placeholder={t('例如：2')}
+                  onChange={(value) =>
+                    setInputs({
+                      ...inputs,
+                      'invite_rebate_setting.count_limit': String(value),
+                    })
+                  }
+                />
+              </Col>
+            </Row>
+            <Row>
+              <Col xs={24} sm={24} md={16} lg={16} xl={12}>
+                <Form.TextArea
+                  label={t('邀请返现链条')}
+                  field={'invite_rebate_setting.chain_ratios'}
+                  placeholder={t('例如：[0.3,0.2,0.1]')}
+                  autosize
+                  extraText={t(
+                    '按邀请层级设置返现比例，例如第一级 30%，第二级 20%，第三级 10%',
+                  )}
+                  onChange={(value) =>
+                    setInputs({
+                      ...inputs,
+                      'invite_rebate_setting.chain_ratios': value,
                     })
                   }
                 />

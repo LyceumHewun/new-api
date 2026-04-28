@@ -3,6 +3,7 @@ package controller
 import (
 	"fmt"
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/QuantumNous/new-api/common"
@@ -251,6 +252,34 @@ func UpdateOption(c *gin.Context) {
 				"message": err.Error(),
 			})
 			return
+		}
+	case "invite_rebate_setting.count_limit":
+		countLimit, err := strconv.Atoi(option.Value.(string))
+		if err != nil || countLimit < -1 {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "返现次数必须为 -1、0 或正整数",
+			})
+			return
+		}
+	case "invite_rebate_setting.chain_ratios":
+		var ratios []float64
+		err = common.UnmarshalJsonStr(option.Value.(string), &ratios)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "返现链条必须为 JSON 数组",
+			})
+			return
+		}
+		for _, ratio := range ratios {
+			if ratio < 0 {
+				c.JSON(http.StatusOK, gin.H{
+					"success": false,
+					"message": "返现比例不能为负数",
+				})
+				return
+			}
 		}
 	case "AutomaticDisableStatusCodes":
 		_, err = operation_setting.ParseHTTPStatusCodeRanges(option.Value.(string))
