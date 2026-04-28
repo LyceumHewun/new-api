@@ -94,6 +94,29 @@ func TestApplyInviteRechargeRebateTx_CountLimitAndIdempotency(t *testing.T) {
 	assert.EqualValues(t, 2, count)
 }
 
+func TestApplyInviteRechargeRebateTx_CountLimitUsesDistinctSources(t *testing.T) {
+	truncateTables(t)
+	setInviteRebateSettingForTest(2, []float64{0, 0.5})
+
+	insertInviteRebateUser(t, 30, 31)
+	insertInviteRebateUser(t, 31, 32)
+	insertInviteRebateUser(t, 32, 0)
+
+	for _, sourceID := range []string{"order-1", "order-2", "order-3", "order-2"} {
+		require.NoError(t, DB.Transaction(func(tx *gorm.DB) error {
+			_, err := ApplyInviteRechargeRebateTx(tx, 30, PaymentProviderStripe, sourceID, sourceID, 1000)
+			return err
+		}))
+	}
+
+	affQuota, affHistory := getInviteQuotaForTest(t, 32)
+	assert.Equal(t, 1000, affQuota)
+	assert.Equal(t, 1000, affHistory)
+	var count int64
+	require.NoError(t, DB.Model(&InviteRebateRecord{}).Count(&count).Error)
+	assert.EqualValues(t, 2, count)
+}
+
 func TestApplyInviteRechargeRebateTx_Disabled(t *testing.T) {
 	truncateTables(t)
 	setInviteRebateSettingForTest(0, []float64{0.5})

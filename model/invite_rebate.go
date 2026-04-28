@@ -30,16 +30,30 @@ type InviteRebateRecord struct {
 	CreatedAt         int64   `json:"created_at" gorm:"bigint;index"`
 }
 
+func countInviteRebateSourcesTx(tx *gorm.DB, payerID int) (int64, error) {
+	var sources []struct {
+		SourceType string
+		SourceId   string
+	}
+	err := tx.Model(&InviteRebateRecord{}).
+		Select("source_type", "source_id").
+		Where("payer_user_id = ?", payerID).
+		Group("source_type, source_id").
+		Find(&sources).Error
+	if err != nil {
+		return 0, err
+	}
+	return int64(len(sources)), nil
+}
+
 func ApplyInviteRechargeRebateTx(tx *gorm.DB, payerID int, sourceType, sourceID, sourceTradeNo string, baseQuota int) ([]InviteRebateRecord, error) {
 	setting := operation_setting.GetInviteRebateSetting()
 	if payerID <= 0 || baseQuota <= 0 || setting.CountLimit == 0 || len(setting.ChainRatios) == 0 {
 		return nil, nil
 	}
 	if setting.CountLimit > 0 {
-		var usedCount int64
-		if err := tx.Model(&InviteRebateRecord{}).
-			Where("payer_user_id = ? AND level = ?", payerID, 1).
-			Count(&usedCount).Error; err != nil {
+		usedCount, err := countInviteRebateSourcesTx(tx, payerID)
+		if err != nil {
 			return nil, err
 		}
 		if usedCount >= int64(setting.CountLimit) {
