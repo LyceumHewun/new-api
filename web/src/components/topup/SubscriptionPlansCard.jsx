@@ -31,7 +31,6 @@ import {
   Typography,
 } from '@douyinfe/semi-ui';
 import { API, showError, showSuccess, renderQuota } from '../../helpers';
-import { getCurrencyConfig } from '../../helpers/render';
 import { RefreshCw, Sparkles } from 'lucide-react';
 import SubscriptionPurchaseModal from './modals/SubscriptionPurchaseModal';
 import {
@@ -40,6 +39,12 @@ import {
 } from '../../helpers/subscriptionFormat';
 
 const { Text } = Typography;
+
+function getPlanCurrencyConfig(currency) {
+  return String(currency || 'USD').toUpperCase() === 'CNY'
+    ? { symbol: '¥', type: 'CNY' }
+    : { symbol: '$', type: 'USD' };
+}
 
 // 过滤易支付方式
 function getEpayMethods(payMethods = []) {
@@ -490,11 +495,10 @@ const SubscriptionPlansCard = ({
               {plans.map((p, index) => {
                 const plan = p?.plan;
                 const totalAmount = Number(plan?.total_amount || 0);
-                const { symbol, rate } = getCurrencyConfig();
+                const { symbol } = getPlanCurrencyConfig(plan?.currency);
                 const price = Number(plan?.price_amount || 0);
-                const convertedPrice = price * rate;
-                const displayPrice = convertedPrice.toFixed(
-                  Number.isInteger(convertedPrice) ? 0 : 2,
+                const displayPrice = price.toFixed(
+                  Number.isInteger(price) ? 0 : 2,
                 );
                 const isPopular = index === 0 && plans.length > 1;
                 const limit = Number(plan?.max_purchase_per_user || 0);
