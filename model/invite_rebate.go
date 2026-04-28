@@ -51,6 +51,16 @@ func ApplyInviteRechargeRebateTx(tx *gorm.DB, payerID int, sourceType, sourceID,
 	if payerID <= 0 || baseQuota <= 0 || setting.CountLimit == 0 || len(setting.ChainRatios) == 0 {
 		return nil, nil
 	}
+
+	var payer User
+	payerQuery := tx.Select("id", "inviter_id").Where("id = ?", payerID)
+	if setting.CountLimit > 0 {
+		payerQuery = payerQuery.Set("gorm:query_option", "FOR UPDATE")
+	}
+	if err := payerQuery.First(&payer).Error; err != nil {
+		return nil, err
+	}
+
 	if setting.CountLimit > 0 {
 		usedCount, err := countInviteRebateSourcesTx(tx, payerID)
 		if err != nil {
@@ -59,11 +69,6 @@ func ApplyInviteRechargeRebateTx(tx *gorm.DB, payerID int, sourceType, sourceID,
 		if usedCount >= int64(setting.CountLimit) {
 			return nil, nil
 		}
-	}
-
-	var payer User
-	if err := tx.Select("id", "inviter_id").Where("id = ?", payerID).First(&payer).Error; err != nil {
-		return nil, err
 	}
 
 	now := common.GetTimestamp()
