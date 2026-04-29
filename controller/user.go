@@ -274,6 +274,9 @@ func GetUser(c *gin.Context) {
 		common.ApiError(c, err)
 		return
 	}
+	if affCount, err := model.CountInvitedUsers(user.Id); err == nil {
+		user.AffCount = affCount
+	}
 	myRole := c.GetInt("role")
 	if myRole <= user.Role && myRole != common.RoleRootUser {
 		common.ApiErrorI18n(c, i18n.MsgUserNoPermissionSameLevel)
@@ -378,6 +381,9 @@ func GetSelf(c *gin.Context) {
 	if err != nil {
 		common.ApiError(c, err)
 		return
+	}
+	if affCount, err := model.CountInvitedUsers(user.Id); err == nil {
+		user.AffCount = affCount
 	}
 	// Hide admin remarks: set to empty to trigger omitempty tag, ensuring the remark field is not included in JSON returned to regular users
 	user.Remark = ""

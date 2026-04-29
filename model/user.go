@@ -215,6 +215,10 @@ func GetAllUsers(pageInfo *common.PageInfo) (users []*User, total int64, err err
 		tx.Rollback()
 		return nil, 0, err
 	}
+	if err = fillUsersAffCountTx(tx, users); err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
 
 	// Commit transaction
 	if err = tx.Commit().Error; err != nil {
@@ -282,6 +286,10 @@ func SearchUsers(keyword string, group string, startIdx int, num int) ([]*User, 
 		tx.Rollback()
 		return nil, 0, err
 	}
+	if err = fillUsersAffCountTx(tx, users); err != nil {
+		tx.Rollback()
+		return nil, 0, err
+	}
 
 	// 提交事务
 	if err = tx.Commit().Error; err != nil {
@@ -303,6 +311,81 @@ func GetUserById(id int, selectAll bool) (*User, error) {
 		err = DB.Omit("password").First(&user, "id = ?", id).Error
 	}
 	return &user, err
+}
+
+type userAffCountRow struct {
+	InviterId    int `gorm:"column:inviter_id"`
+	InvitedCount int `gorm:"column:invited_count"`
+}
+
+func countInvitedUsersTx(tx *gorm.DB, userIds []int) (map[int]int, error) {
+	counts := make(map[int]int, len(userIds))
+	if len(userIds) == 0 {
+		return counts, nil
+	}
+	uniqueIds := make([]int, 0, len(userIds))
+	seen := make(map[int]struct{}, len(userIds))
+	for _, id := range userIds {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		uniqueIds = append(uniqueIds, id)
+		counts[id] = 0
+	}
+	if len(uniqueIds) == 0 {
+		return counts, nil
+	}
+	if tx == nil {
+		tx = DB
+	}
+	var rows []userAffCountRow
+	err := tx.Unscoped().Model(&User{}).
+		Select("inviter_id, COUNT(*) AS invited_count").
+		Where("inviter_id IN ?", uniqueIds).
+		Group("inviter_id").
+		Scan(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	for _, row := range rows {
+		counts[row.InviterId] = row.InvitedCount
+	}
+	return counts, nil
+}
+
+func fillUsersAffCountTx(tx *gorm.DB, users []*User) error {
+	if len(users) == 0 {
+		return nil
+	}
+	ids := make([]int, 0, len(users))
+	for _, user := range users {
+		if user != nil {
+			ids = append(ids, user.Id)
+		}
+	}
+	counts, err := countInvitedUsersTx(tx, ids)
+	if err != nil {
+		return err
+	}
+	for _, user := range users {
+		if user == nil {
+			continue
+		}
+		user.AffCount = counts[user.Id]
+	}
+	return nil
+}
+
+func CountInvitedUsers(userId int) (int, error) {
+	counts, err := countInvitedUsersTx(nil, []int{userId})
+	if err != nil {
+		return 0, err
+	}
+	return counts[userId], nil
 }
 
 func GetUserIdByAffCode(affCode string) (int, error) {
@@ -331,14 +414,18 @@ func HardDeleteUserById(id int) error {
 }
 
 func inviteUser(inviterId int) (err error) {
-	user, err := GetUserById(inviterId, true)
-	if err != nil {
-		return err
+	res := DB.Model(&User{}).Where("id = ?", inviterId).Updates(map[string]interface{}{
+		"aff_count":   gorm.Expr("aff_count + ?", 1),
+		"aff_quota":   gorm.Expr("aff_quota + ?", common.QuotaForInviter),
+		"aff_history": gorm.Expr("aff_history + ?", common.QuotaForInviter),
+	})
+	if res.Error != nil {
+		return res.Error
 	}
-	user.AffCount++
-	user.AffQuota += common.QuotaForInviter
-	user.AffHistoryQuota += common.QuotaForInviter
-	return DB.Save(user).Error
+	if res.RowsAffected == 0 {
+		return gorm.ErrRecordNotFound
+	}
+	return nil
 }
 
 func (user *User) TransferAffQuotaToQuota(quota int) error {
@@ -428,8 +515,8 @@ func (user *User) Insert(inviterId int) error {
 		if common.QuotaForInviter > 0 {
 			//_ = IncreaseUserQuota(inviterId, common.QuotaForInviter)
 			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户赠送 %s", logger.LogQuota(common.QuotaForInviter)))
-			_ = inviteUser(inviterId)
 		}
+		_ = inviteUser(inviterId)
 	}
 	return nil
 }
@@ -488,8 +575,8 @@ func (user *User) FinalizeOAuthUserCreation(inviterId int) {
 		}
 		if common.QuotaForInviter > 0 {
 			RecordLog(inviterId, LogTypeSystem, fmt.Sprintf("邀请用户赠送 %s", logger.LogQuota(common.QuotaForInviter)))
-			_ = inviteUser(inviterId)
 		}
+		_ = inviteUser(inviterId)
 	}
 }
 
