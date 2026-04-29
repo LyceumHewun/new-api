@@ -92,6 +92,7 @@ const TopUp = () => {
   const [affLink, setAffLink] = useState('');
   const [openTransfer, setOpenTransfer] = useState(false);
   const [transferAmount, setTransferAmount] = useState(0);
+  const [inviteRebateSetting, setInviteRebateSetting] = useState({});
 
   // 账单Modal状态
   const [openHistory, setOpenHistory] = useState(false);
@@ -647,7 +648,7 @@ const TopUp = () => {
                 ? data.waffo_min_topup
                 : enableWaffoPancakeTopUp
                   ? data.waffo_pancake_min_topup
-                : 1;
+                  : 1;
           setEnableOnlineTopUp(enableOnlineTopUp);
           setEnableStripeTopUp(enableStripeTopUp);
           setEnableCreemTopUp(enableCreemTopUp);
@@ -656,6 +657,7 @@ const TopUp = () => {
           setWaffoMinTopUp(data.waffo_min_topup || 1);
           setEnableWaffoPancakeTopUp(enableWaffoPancakeTopUp);
           setWaffoPancakeMinTopUp(data.waffo_pancake_min_topup || 1);
+          setInviteRebateSetting(data.invite_rebate_setting || {});
           setMinTopUp(minTopUpValue);
           setTopUpCount(minTopUpValue);
 
@@ -994,6 +996,7 @@ const TopUp = () => {
           setOpenTransfer={setOpenTransfer}
           affLink={affLink}
           handleAffLinkClick={handleAffLinkClick}
+          inviteRebateSetting={inviteRebateSetting}
         />
       </div>
     </div>

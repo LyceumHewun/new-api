@@ -1182,6 +1182,8 @@
     "失败时自动禁用通道": "Désactiver automatiquement le canal en cas d'échec",
     "失败重试次数": "Nombre de tentatives en cas d'échec",
     "奖励说明": "Description de la récompense",
+    "第 {{level}} 级 {{ratio}}%": "Niveau {{level}} {{ratio}} %",
+    "邀请链奖励：{{chain}}": "Récompense de chaîne d'invitation : {{chain}}",
     "套餐": "Plan",
     "套餐副标题": "Sous-titre du plan",
     "套餐名称": "Nom du plan",
