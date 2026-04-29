@@ -305,7 +305,7 @@ export const getSubscriptionsColumns = ({
       title: t('价格'),
       dataIndex: ['plan', 'price_amount'],
       width: 100,
-      render: (text) => renderPrice(text),
+      render: (text, record) => renderPrice(text, record),
     },
     {
       title: t('购买上限'),

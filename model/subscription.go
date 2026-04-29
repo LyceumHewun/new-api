@@ -10,7 +10,9 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/pkg/cachex"
+	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/samber/hot"
+	"github.com/shopspring/decimal"
 	"gorm.io/gorm"
 )
 
@@ -205,12 +207,19 @@ type SubscriptionOrder struct {
 	CreateTime      int64  `json:"create_time"`
 	CompleteTime    int64  `json:"complete_time"`
 
+	RebateBaseQuota int `json:"rebate_base_quota" gorm:"default:0"`
+
 	ProviderPayload string `json:"provider_payload" gorm:"type:text"`
 }
 
 func (o *SubscriptionOrder) Insert() error {
 	if o.CreateTime == 0 {
 		o.CreateTime = common.GetTimestamp()
+	}
+	if o.RebateBaseQuota == 0 && o.PlanId > 0 {
+		if plan, err := GetSubscriptionPlanById(o.PlanId); err == nil {
+			o.RebateBaseQuota = calculateSubscriptionRebateBaseQuota(o.Money, o.PaymentProvider, plan.Currency)
+		}
 	}
 	return DB.Create(o).Error
 }
@@ -456,7 +465,7 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 			return nil, errors.New("已达到该套餐购买上限")
 		}
 	}
-	nowUnix := GetDBTimestamp()
+	nowUnix := getDBTimestampTx(tx)
 	now := time.Unix(nowUnix, 0)
 	endUnix, err := calcPlanEndTime(now, plan)
 	if err != nil {
@@ -505,6 +514,44 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	return sub, nil
 }
 
+func subscriptionRebateExchangeRate() decimal.Decimal {
+	rate := operation_setting.USDExchangeRate
+	if rate <= 0 {
+		rate = operation_setting.Price
+	}
+	if rate <= 0 {
+		rate = 7.3
+	}
+	return decimal.NewFromFloat(rate)
+}
+
+func calculateSubscriptionRebateBaseQuota(money float64, paymentProvider string, currency string) int {
+	if money <= 0 {
+		return 0
+	}
+	paid := decimal.NewFromFloat(money)
+	if paid.LessThanOrEqual(decimal.Zero) {
+		return 0
+	}
+	if paymentProvider == PaymentProviderEpay || strings.ToUpper(strings.TrimSpace(currency)) == "CNY" {
+		paid = paid.Div(subscriptionRebateExchangeRate())
+	}
+	return int(paid.Mul(decimal.NewFromFloat(common.QuotaPerUnit)).IntPart())
+}
+
+func subscriptionOrderRebateBaseQuota(order *SubscriptionOrder, plan *SubscriptionPlan) int {
+	if order == nil {
+		return 0
+	}
+	if order.RebateBaseQuota > 0 {
+		return order.RebateBaseQuota
+	}
+	if plan == nil {
+		return 0
+	}
+	return calculateSubscriptionRebateBaseQuota(order.Money, order.PaymentProvider, plan.Currency)
+}
+
 // Complete a subscription order (idempotent). Creates a UserSubscription snapshot from the plan.
 // expectedPaymentProvider guards against cross-gateway callback attacks (empty skips the check).
 // actualPaymentMethod updates the order's PaymentMethod to reflect the real payment type used (empty skips update).
@@ -521,6 +568,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 	var logMoney float64
 	var logPaymentMethod string
 	var upgradeGroup string
+	var rebateRecords []InviteRebateRecord
 	err := DB.Transaction(func(tx *gorm.DB) error {
 		var order SubscriptionOrder
 		if err := tx.Set("gorm:query_option", "FOR UPDATE").Where(refCol+" = ?", tradeNo).First(&order).Error; err != nil {
@@ -529,15 +577,21 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if expectedPaymentProvider != "" && order.PaymentProvider != expectedPaymentProvider {
 			return ErrPaymentMethodMismatch
 		}
+		plan, err := getSubscriptionPlanByIdTx(tx, order.PlanId)
+		if err != nil {
+			return err
+		}
+		baseQuota := subscriptionOrderRebateBaseQuota(&order, plan)
 		if order.Status == common.TopUpStatusSuccess {
-			return nil
+			if baseQuota <= 0 {
+				return nil
+			}
+			var applyErr error
+			rebateRecords, applyErr = ApplyInviteRechargeRebateTx(tx, order.UserId, order.PaymentProvider, order.TradeNo, order.TradeNo, baseQuota)
+			return applyErr
 		}
 		if order.Status != common.TopUpStatusPending {
 			return ErrSubscriptionOrderStatusInvalid
-		}
-		plan, err := GetSubscriptionPlanById(order.PlanId)
-		if err != nil {
-			return err
 		}
 		if !plan.Enabled {
 			// still allow completion for already purchased orders
@@ -561,6 +615,13 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		if err := tx.Save(&order).Error; err != nil {
 			return err
 		}
+		if baseQuota > 0 {
+			var applyErr error
+			rebateRecords, applyErr = ApplyInviteRechargeRebateTx(tx, order.UserId, order.PaymentProvider, order.TradeNo, order.TradeNo, baseQuota)
+			if applyErr != nil {
+				return applyErr
+			}
+		}
 		logUserId = order.UserId
 		logPlanTitle = plan.Title
 		logMoney = order.Money
@@ -577,6 +638,7 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		msg := fmt.Sprintf("订阅购买成功，套餐: %s，支付金额: %.2f，支付方式: %s", logPlanTitle, logMoney, logPaymentMethod)
 		RecordLog(logUserId, LogTypeTopup, msg)
 	}
+	RecordInviteRebateLogs(rebateRecords)
 	return nil
 }
 
