@@ -388,6 +388,74 @@ func CountInvitedUsers(userId int) (int, error) {
 	return counts[userId], nil
 }
 
+func validateUserInviterTx(tx *gorm.DB, userId int, inviterId int) error {
+	if userId <= 0 {
+		return errors.New("用户不存在")
+	}
+	if inviterId == 0 {
+		return nil
+	}
+	if inviterId == userId {
+		return errors.New("邀请人不能是用户自己")
+	}
+	if tx == nil {
+		tx = DB
+	}
+	var inviter User
+	if err := tx.Unscoped().Select("id").Where("id = ?", inviterId).First(&inviter).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return errors.New("邀请人不存在")
+		}
+		return err
+	}
+	currentId := inviterId
+	for depth := 0; currentId > 0 && depth < 1000; depth++ {
+		if currentId == userId {
+			return errors.New("不能将邀请人设置为该用户的下级")
+		}
+		var current User
+		if err := tx.Unscoped().Select("id", "inviter_id").Where("id = ?", currentId).First(&current).Error; err != nil {
+			if errors.Is(err, gorm.ErrRecordNotFound) {
+				return nil
+			}
+			return err
+		}
+		currentId = current.InviterId
+	}
+	if currentId > 0 {
+		return errors.New("邀请链过深")
+	}
+	return nil
+}
+
+func syncUsersAffCountTx(tx *gorm.DB, userIds ...int) error {
+	if tx == nil {
+		tx = DB
+	}
+	ids := make([]int, 0, len(userIds))
+	seen := make(map[int]struct{}, len(userIds))
+	for _, id := range userIds {
+		if id <= 0 {
+			continue
+		}
+		if _, ok := seen[id]; ok {
+			continue
+		}
+		seen[id] = struct{}{}
+		ids = append(ids, id)
+	}
+	counts, err := countInvitedUsersTx(tx, ids)
+	if err != nil {
+		return err
+	}
+	for _, id := range ids {
+		if err := tx.Model(&User{}).Where("id = ?", id).Update("aff_count", counts[id]).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func GetUserIdByAffCode(affCode string) (int, error) {
 	if affCode == "" {
 		return 0, errors.New("affCode 为空！")
@@ -599,6 +667,10 @@ func (user *User) Update(updatePassword bool) error {
 }
 
 func (user *User) Edit(updatePassword bool) error {
+	return user.EditWithInviter(updatePassword, false)
+}
+
+func (user *User) EditWithInviter(updatePassword bool, updateInviter bool) error {
 	var err error
 	if updatePassword {
 		user.Password, err = common.Password2Hash(user.Password)
@@ -617,9 +689,31 @@ func (user *User) Edit(updatePassword bool) error {
 	if updatePassword {
 		updates["password"] = newUser.Password
 	}
-
-	DB.First(&user, user.Id)
-	if err = DB.Model(user).Updates(updates).Error; err != nil {
+	var oldInviterId int
+	err = DB.Transaction(func(tx *gorm.DB) error {
+		var current User
+		if err := tx.First(&current, user.Id).Error; err != nil {
+			return err
+		}
+		oldInviterId = current.InviterId
+		if updateInviter {
+			if err := validateUserInviterTx(tx, newUser.Id, newUser.InviterId); err != nil {
+				return err
+			}
+			updates["inviter_id"] = newUser.InviterId
+		}
+		if err := tx.Model(&current).Updates(updates).Error; err != nil {
+			return err
+		}
+		if updateInviter && oldInviterId != newUser.InviterId {
+			return syncUsersAffCountTx(tx, oldInviterId, newUser.InviterId)
+		}
+		return nil
+	})
+	if err != nil {
+		return err
+	}
+	if err = DB.First(user, user.Id).Error; err != nil {
 		return err
 	}
 

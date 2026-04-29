@@ -86,6 +86,101 @@ func TestUserList_FillsAffCountFromInviterId(t *testing.T) {
 	require.Equal(t, 2, findUserAffCountForTest(t, users, 10))
 }
 
+func TestUserEditWithInviter_UpdatesInviterAndCounts(t *testing.T) {
+	truncateTables(t)
+
+	require.NoError(t, DB.Create(&User{
+		Id:        20,
+		Username:  "edit_inviter_target",
+		Status:    common.UserStatusEnabled,
+		AffCode:   "edit_inviter_target",
+		InviterId: 21,
+	}).Error)
+	require.NoError(t, DB.Create(&User{
+		Id:       21,
+		Username: "edit_inviter_old",
+		Status:   common.UserStatusEnabled,
+		AffCode:  "edit_inviter_old",
+		AffCount: 1,
+	}).Error)
+	require.NoError(t, DB.Create(&User{
+		Id:       22,
+		Username: "edit_inviter_new",
+		Status:   common.UserStatusEnabled,
+		AffCode:  "edit_inviter_new",
+	}).Error)
+
+	user := &User{
+		Id:          20,
+		Username:    "edit_inviter_target",
+		DisplayName: "edit_inviter_target",
+		Group:       "default",
+		InviterId:   22,
+	}
+	require.NoError(t, user.EditWithInviter(false, true))
+
+	var target User
+	require.NoError(t, DB.Select("inviter_id").Where("id = ?", 20).First(&target).Error)
+	assert.Equal(t, 22, target.InviterId)
+
+	oldCount, err := CountInvitedUsers(21)
+	require.NoError(t, err)
+	assert.Equal(t, 0, oldCount)
+	newCount, err := CountInvitedUsers(22)
+	require.NoError(t, err)
+	assert.Equal(t, 1, newCount)
+
+	var oldInviter User
+	require.NoError(t, DB.Select("aff_count").Where("id = ?", 21).First(&oldInviter).Error)
+	assert.Equal(t, 0, oldInviter.AffCount)
+	var newInviter User
+	require.NoError(t, DB.Select("aff_count").Where("id = ?", 22).First(&newInviter).Error)
+	assert.Equal(t, 1, newInviter.AffCount)
+}
+
+func TestUserEditWithInviter_RejectsSelfAndCycle(t *testing.T) {
+	truncateTables(t)
+
+	require.NoError(t, DB.Create(&User{
+		Id:        30,
+		Username:  "cycle_user_30",
+		Status:    common.UserStatusEnabled,
+		AffCode:   "cycle_user_30",
+		InviterId: 31,
+	}).Error)
+	require.NoError(t, DB.Create(&User{
+		Id:        31,
+		Username:  "cycle_user_31",
+		Status:    common.UserStatusEnabled,
+		AffCode:   "cycle_user_31",
+		InviterId: 32,
+	}).Error)
+	require.NoError(t, DB.Create(&User{
+		Id:       32,
+		Username: "cycle_user_32",
+		Status:   common.UserStatusEnabled,
+		AffCode:  "cycle_user_32",
+	}).Error)
+
+	self := &User{
+		Id:          30,
+		Username:    "cycle_user_30",
+		DisplayName: "cycle_user_30",
+		Group:       "default",
+		InviterId:   30,
+	}
+	require.Error(t, self.EditWithInviter(false, true))
+
+	cycle := &User{
+		Id:          32,
+		Username:    "cycle_user_32",
+		DisplayName: "cycle_user_32",
+		Group:       "default",
+		InviterId:   30,
+	}
+	require.Error(t, cycle.EditWithInviter(false, true))
+}
+
 func findUserAffCountForTest(t *testing.T, users []*User, userId int) int {
 	t.Helper()
 	for _, user := range users {
