@@ -1170,6 +1170,8 @@
     "失败时自动禁用通道": "Tự động vô hiệu hóa kênh khi thất bại",
     "失败重试次数": "Số lần thử lại thất bại",
     "奖励说明": "Mô tả phần thưởng",
+    "第 {{level}} 级 {{ratio}}%": "Cấp {{level}} {{ratio}}%",
+    "邀请链奖励：{{chain}}": "Thưởng chuỗi mời: {{chain}}",
     "套餐": "Gói",
     "套餐副标题": "Phụ đề gói",
     "套餐名称": "Tên gói",

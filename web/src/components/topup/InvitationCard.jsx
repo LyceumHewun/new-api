@@ -38,7 +38,34 @@ const InvitationCard = ({
   setOpenTransfer,
   affLink,
   handleAffLinkClick,
+  inviteRebateSetting,
 }) => {
+  const inviteChainRatios = React.useMemo(() => {
+    const ratios = inviteRebateSetting?.chain_ratios;
+    if (!Array.isArray(ratios)) {
+      return [];
+    }
+    return ratios
+      .map((ratio) => Number(ratio))
+      .filter((ratio) => Number.isFinite(ratio) && ratio >= 0);
+  }, [inviteRebateSetting]);
+
+  const formatRatio = (ratio) => {
+    const percentage = ratio * 100;
+    return Number.isInteger(percentage)
+      ? String(percentage)
+      : percentage.toFixed(2).replace(/\.?0+$/, '');
+  };
+
+  const inviteChainText = inviteChainRatios
+    .map((ratio, index) =>
+      t('第 {{level}} 级 {{ratio}}%', {
+        level: index + 1,
+        ratio: formatRatio(ratio),
+      }),
+    )
+    .join('，');
+
   return (
     <Card className='!rounded-2xl shadow-sm border-0'>
       {/* 卡片头部 */}
@@ -219,6 +246,15 @@ const InvitationCard = ({
                 {t('邀请的好友越多，获得的奖励越多')}
               </Text>
             </div>
+
+            {inviteChainText && (
+              <div className='flex items-start gap-2'>
+                <Badge dot type='success' />
+                <Text type='tertiary' className='text-sm'>
+                  {t('邀请链奖励：{{chain}}', { chain: inviteChainText })}
+                </Text>
+              </div>
+            )}
           </div>
         </Card>
       </Space>
