@@ -181,6 +181,37 @@ func TestUserEditWithInviter_RejectsSelfAndCycle(t *testing.T) {
 	require.Error(t, cycle.EditWithInviter(false, true))
 }
 
+func TestUserEditWithInviter_RejectsDeletedInviter(t *testing.T) {
+	truncateTables(t)
+
+	require.NoError(t, DB.Create(&User{
+		Id:       40,
+		Username: "deleted_inviter_target",
+		Status:   common.UserStatusEnabled,
+		AffCode:  "deleted_inviter_target",
+	}).Error)
+	require.NoError(t, DB.Create(&User{
+		Id:       41,
+		Username: "deleted_inviter",
+		Status:   common.UserStatusEnabled,
+		AffCode:  "deleted_inviter",
+	}).Error)
+	require.NoError(t, DB.Delete(&User{}, 41).Error)
+
+	user := &User{
+		Id:          40,
+		Username:    "deleted_inviter_target",
+		DisplayName: "deleted_inviter_target",
+		Group:       "default",
+		InviterId:   41,
+	}
+	require.Error(t, user.EditWithInviter(false, true))
+
+	var target User
+	require.NoError(t, DB.Select("inviter_id").Where("id = ?", 40).First(&target).Error)
+	assert.Equal(t, 0, target.InviterId)
+}
+
 func findUserAffCountForTest(t *testing.T, users []*User, userId int) int {
 	t.Helper()
 	for _, user := range users {

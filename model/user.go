@@ -402,7 +402,7 @@ func validateUserInviterTx(tx *gorm.DB, userId int, inviterId int) error {
 		tx = DB
 	}
 	var inviter User
-	if err := tx.Unscoped().Select("id").Where("id = ?", inviterId).First(&inviter).Error; err != nil {
+	if err := tx.Select("id").Where("id = ?", inviterId).First(&inviter).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return errors.New("邀请人不存在")
 		}
@@ -414,7 +414,7 @@ func validateUserInviterTx(tx *gorm.DB, userId int, inviterId int) error {
 			return errors.New("不能将邀请人设置为该用户的下级")
 		}
 		var current User
-		if err := tx.Unscoped().Select("id", "inviter_id").Where("id = ?", currentId).First(&current).Error; err != nil {
+		if err := tx.Select("id", "inviter_id").Where("id = ?", currentId).First(&current).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				return nil
 			}
