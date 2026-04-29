@@ -29,18 +29,20 @@ import {
   verifyJSON,
 } from '../../../helpers';
 
+const defaultInputs = {
+  QuotaForNewUser: '',
+  PreConsumedQuota: '',
+  QuotaForInviter: '',
+  QuotaForInvitee: '',
+  'invite_rebate_setting.count_limit': '0',
+  'invite_rebate_setting.chain_ratios': '[]',
+  'quota_setting.enable_free_model_pre_consume': true,
+};
+
 export default function SettingsCreditLimit(props) {
   const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
-  const [inputs, setInputs] = useState({
-    QuotaForNewUser: '',
-    PreConsumedQuota: '',
-    QuotaForInviter: '',
-    QuotaForInvitee: '',
-    'invite_rebate_setting.count_limit': '0',
-    'invite_rebate_setting.chain_ratios': '[]',
-    'quota_setting.enable_free_model_pre_consume': true,
-  });
+  const [inputs, setInputs] = useState(defaultInputs);
   const refForm = useRef();
   const [inputsRow, setInputsRow] = useState(inputs);
 
@@ -53,7 +55,9 @@ export default function SettingsCreditLimit(props) {
     );
     if (
       !Array.isArray(chainRatios) ||
-      chainRatios.some((ratio) => Number(ratio) < 0 || Number.isNaN(Number(ratio)))
+      chainRatios.some(
+        (ratio) => Number(ratio) < 0 || Number.isNaN(Number(ratio)),
+      )
     ) {
       return showError(t('返现链条必须为非负数字数组'));
     }
@@ -95,9 +99,9 @@ export default function SettingsCreditLimit(props) {
   }
 
   useEffect(() => {
-    const currentInputs = {};
-    for (let key in props.options) {
-      if (Object.keys(inputs).includes(key)) {
+    const currentInputs = { ...defaultInputs };
+    for (let key in defaultInputs) {
+      if (Object.prototype.hasOwnProperty.call(props.options, key)) {
         currentInputs[key] = props.options[key];
       }
     }
@@ -190,7 +194,9 @@ export default function SettingsCreditLimit(props) {
                   field={'invite_rebate_setting.count_limit'}
                   step={1}
                   min={-1}
-                  extraText={t('-1 表示无限，0 表示关闭，正整数表示前 N 次充值返现')}
+                  extraText={t(
+                    '-1 表示无限，0 表示关闭，正整数表示前 N 次充值返现',
+                  )}
                   placeholder={t('例如：2')}
                   onChange={(value) =>
                     setInputs({
