@@ -81,3 +81,41 @@ func TestCompleteSubscriptionOrder_AppliesInviteRebateFromEpayCNYPayment(t *test
 	assert.Equal(t, 1000, affQuota)
 	assert.Equal(t, 1000, affHistory)
 }
+
+func TestCompleteSubscriptionOrder_UsesOrderRebateSnapshot(t *testing.T) {
+	truncateTables(t)
+	setInviteRebateSettingForTest(-1, []float64{0.1})
+	setSubscriptionRebateGlobalsForTest(t, 1000, 7.25)
+
+	insertInviteRebateUser(t, 11, 12)
+	insertInviteRebateUser(t, 12, 0)
+	plan := &SubscriptionPlan{
+		Id:            702,
+		Title:         "Snapshot Plan",
+		PriceAmount:   10,
+		Currency:      "USD",
+		DurationUnit:  SubscriptionDurationMonth,
+		DurationValue: 1,
+		Enabled:       true,
+		TotalAmount:   1000,
+	}
+	require.NoError(t, DB.Create(plan).Error)
+	insertSubscriptionRebateOrder(t, "sub-rebate-snapshot", 11, plan.Id, 10, PaymentProviderStripe)
+
+	order := GetSubscriptionOrderByTradeNo("sub-rebate-snapshot")
+	require.NotNil(t, order)
+	require.Equal(t, 10000, order.RebateBaseQuota)
+
+	setSubscriptionRebateGlobalsForTest(t, 1000, 10)
+	require.NoError(t, DB.Model(&SubscriptionPlan{}).Where("id = ?", plan.Id).Updates(map[string]interface{}{
+		"currency": "CNY",
+	}).Error)
+	InvalidateSubscriptionPlanCache(plan.Id)
+
+	require.NoError(t, CompleteSubscriptionOrder("sub-rebate-snapshot", `{"provider":"stripe"}`, PaymentProviderStripe, "stripe"))
+
+	var record InviteRebateRecord
+	require.NoError(t, DB.Where("source_id = ?", "sub-rebate-snapshot").First(&record).Error)
+	assert.Equal(t, 10000, record.BaseQuota)
+	assert.Equal(t, 1000, record.RebateQuota)
+}

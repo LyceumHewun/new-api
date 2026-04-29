@@ -207,12 +207,19 @@ type SubscriptionOrder struct {
 	CreateTime      int64  `json:"create_time"`
 	CompleteTime    int64  `json:"complete_time"`
 
+	RebateBaseQuota int `json:"rebate_base_quota" gorm:"default:0"`
+
 	ProviderPayload string `json:"provider_payload" gorm:"type:text"`
 }
 
 func (o *SubscriptionOrder) Insert() error {
 	if o.CreateTime == 0 {
 		o.CreateTime = common.GetTimestamp()
+	}
+	if o.RebateBaseQuota == 0 && o.PlanId > 0 {
+		if plan, err := GetSubscriptionPlanById(o.PlanId); err == nil {
+			o.RebateBaseQuota = calculateSubscriptionRebateBaseQuota(o.Money, o.PaymentProvider, plan.Currency)
+		}
 	}
 	return DB.Create(o).Error
 }
@@ -518,19 +525,31 @@ func subscriptionRebateExchangeRate() decimal.Decimal {
 	return decimal.NewFromFloat(rate)
 }
 
-func subscriptionOrderRebateBaseQuota(order *SubscriptionOrder, plan *SubscriptionPlan) int {
-	if order == nil || plan == nil || order.Money <= 0 {
+func calculateSubscriptionRebateBaseQuota(money float64, paymentProvider string, currency string) int {
+	if money <= 0 {
 		return 0
 	}
-	paid := decimal.NewFromFloat(order.Money)
+	paid := decimal.NewFromFloat(money)
 	if paid.LessThanOrEqual(decimal.Zero) {
 		return 0
 	}
-	currency := strings.ToUpper(strings.TrimSpace(plan.Currency))
-	if order.PaymentProvider == PaymentProviderEpay || currency == "CNY" {
+	if paymentProvider == PaymentProviderEpay || strings.ToUpper(strings.TrimSpace(currency)) == "CNY" {
 		paid = paid.Div(subscriptionRebateExchangeRate())
 	}
 	return int(paid.Mul(decimal.NewFromFloat(common.QuotaPerUnit)).IntPart())
+}
+
+func subscriptionOrderRebateBaseQuota(order *SubscriptionOrder, plan *SubscriptionPlan) int {
+	if order == nil {
+		return 0
+	}
+	if order.RebateBaseQuota > 0 {
+		return order.RebateBaseQuota
+	}
+	if plan == nil {
+		return 0
+	}
+	return calculateSubscriptionRebateBaseQuota(order.Money, order.PaymentProvider, plan.Currency)
 }
 
 // Complete a subscription order (idempotent). Creates a UserSubscription snapshot from the plan.
