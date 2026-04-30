@@ -502,7 +502,7 @@ const SubscriptionPlansCard = ({
                 const displayPrice = price.toFixed(
                   Number.isInteger(price) ? 0 : 2,
                 );
-                const isPopular = index === 0 && plans.length > 1;
+                const isPopular = !!plan?.recommended;
                 const limit = Number(plan?.max_purchase_per_user || 0);
                 const limitLabel = limit > 0 ? `${t('限购')} ${limit}` : null;
                 const totalLabel =

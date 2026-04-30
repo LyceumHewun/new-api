@@ -100,6 +100,7 @@ const AddEditSubscriptionModal = ({
     quota_reset_period: 'never',
     quota_reset_custom_seconds: 0,
     enabled: true,
+    recommended: false,
     sort_order: 0,
     max_purchase_per_user: 0,
     total_amount: 0,
@@ -124,6 +125,7 @@ const AddEditSubscriptionModal = ({
       quota_reset_period: p.quota_reset_period || 'never',
       quota_reset_custom_seconds: Number(p.quota_reset_custom_seconds || 0),
       enabled: p.enabled !== false,
+      recommended: !!p.recommended,
       sort_order: Number(p.sort_order || 0),
       max_purchase_per_user: Number(p.max_purchase_per_user || 0),
       total_amount: Number(
@@ -169,6 +171,7 @@ const AddEditSubscriptionModal = ({
             values.quota_reset_period === 'custom'
               ? Number(values.quota_reset_custom_seconds || 0)
               : 0,
+          recommended: Boolean(values.recommended),
           sort_order: Number(values.sort_order || 0),
           max_purchase_per_user: Number(values.max_purchase_per_user || 0),
           total_amount: displayAmountToQuota(values.total_amount),
@@ -384,6 +387,14 @@ const AddEditSubscriptionModal = ({
                       <Form.Switch
                         field='enabled'
                         label={t('启用状态')}
+                        size='large'
+                      />
+                    </Col>
+
+                    <Col span={12}>
+                      <Form.Switch
+                        field='recommended'
+                        label={t('推荐套餐')}
                         size='large'
                       />
                     </Col>

@@ -159,8 +159,9 @@ type SubscriptionPlan struct {
 	DurationValue int    `json:"duration_value" gorm:"type:int;not null;default:1"`
 	CustomSeconds int64  `json:"custom_seconds" gorm:"type:bigint;not null;default:0"`
 
-	Enabled   bool `json:"enabled" gorm:"default:true"`
-	SortOrder int  `json:"sort_order" gorm:"type:int;default:0"`
+	Enabled     bool `json:"enabled" gorm:"default:true"`
+	SortOrder   int  `json:"sort_order" gorm:"type:int;default:0"`
+	Recommended bool `json:"recommended" gorm:"default:false"`
 
 	StripePriceId  string `json:"stripe_price_id" gorm:"type:varchar(128);default:''"`
 	CreemProductId string `json:"creem_product_id" gorm:"type:varchar(128);default:''"`
