@@ -128,11 +128,14 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
     }
   };
 
-  const confirmAdminComplete = (tradeNo) => {
+  const confirmAdminComplete = (record) => {
+    const isSubscription = isSubscriptionTopup(record);
     Modal.confirm({
       title: t('确认补单'),
-      content: t('是否将该订单标记为成功并为用户入账？'),
-      onOk: () => handleAdminComplete(tradeNo),
+      content: isSubscription
+        ? t('是否将该订阅套餐订单标记为成功并开通套餐？')
+        : t('是否将该订单标记为成功并为用户入账？'),
+      onOk: () => handleAdminComplete(record.trade_no),
     });
   };
 
@@ -243,17 +246,20 @@ const TopupHistoryModal = ({ visible, onCancel, t }) => {
         key: 'action',
         render: (_, record) => {
           const actions = [];
-          if (record.record_type !== 'invite_rebate' && record.status === 'pending') {
+          if (
+            record.record_type !== 'invite_rebate' &&
+            record.status === 'pending'
+          ) {
             actions.push(
               <Button
-                key="complete"
+                key='complete'
                 size='small'
                 type='primary'
                 theme='outline'
-                onClick={() => confirmAdminComplete(record.trade_no)}
+                onClick={() => confirmAdminComplete(record)}
               >
                 {t('补单')}
-              </Button>
+              </Button>,
             );
           }
           return actions.length > 0 ? <>{actions}</> : null;

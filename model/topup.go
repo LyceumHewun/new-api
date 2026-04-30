@@ -457,6 +457,20 @@ func SearchAllTopUps(keyword string, pageInfo *common.PageInfo) (topups []*TopUp
 	return topups, total, nil
 }
 
+// ManualCompletePaidOrder 管理员手动完成充值或订阅订单
+func ManualCompletePaidOrder(tradeNo string, callerIp string) error {
+	if tradeNo == "" {
+		return errors.New("未提供订单号")
+	}
+	if err := CompleteSubscriptionOrder(tradeNo, "", "", ""); err != nil {
+		if !errors.Is(err, ErrSubscriptionOrderNotFound) {
+			return err
+		}
+		return ManualCompleteTopUp(tradeNo, callerIp)
+	}
+	return nil
+}
+
 // ManualCompleteTopUp 管理员手动完成订单并给用户充值
 func ManualCompleteTopUp(tradeNo string, callerIp string) error {
 	if tradeNo == "" {
