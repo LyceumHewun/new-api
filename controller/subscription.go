@@ -38,9 +38,9 @@ func subscriptionEpayMoney(plan *model.SubscriptionPlan) float64 {
 	if normalizeSubscriptionCurrency(plan.Currency) == "CNY" {
 		return plan.PriceAmount
 	}
-	rate := operation_setting.USDExchangeRate
+	rate := operation_setting.Price
 	if rate <= 0 {
-		rate = operation_setting.Price
+		rate = operation_setting.USDExchangeRate
 	}
 	if rate <= 0 {
 		rate = 7.3

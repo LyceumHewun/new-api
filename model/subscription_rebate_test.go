@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/QuantumNous/new-api/common"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -15,14 +16,17 @@ func setSubscriptionRebateGlobalsForTest(t *testing.T, quotaPerUnit float64, exc
 	originalQuotaPerUnit := common.QuotaPerUnit
 	originalUSDExchangeRate := operation_setting.USDExchangeRate
 	originalPrice := operation_setting.Price
+	originalStripeUnitPrice := setting.StripeUnitPrice
 	t.Cleanup(func() {
 		common.QuotaPerUnit = originalQuotaPerUnit
 		operation_setting.USDExchangeRate = originalUSDExchangeRate
 		operation_setting.Price = originalPrice
+		setting.StripeUnitPrice = originalStripeUnitPrice
 	})
 	common.QuotaPerUnit = quotaPerUnit
 	operation_setting.USDExchangeRate = exchangeRate
 	operation_setting.Price = exchangeRate
+	setting.StripeUnitPrice = exchangeRate
 }
 
 func insertSubscriptionRebateOrder(t *testing.T, tradeNo string, userID int, plan *SubscriptionPlan, money float64, provider string) {
@@ -150,4 +154,44 @@ func TestCompleteSubscriptionOrder_UsesOrderRebateSnapshot(t *testing.T) {
 	topUp := GetTopUpByTradeNo("sub-rebate-snapshot")
 	require.NotNil(t, topUp)
 	assert.Equal(t, common.TopUpStatusSuccess, topUp.Status)
+}
+
+func TestSubscriptionOrderRebateSnapshot_UsesProviderTopupPrice(t *testing.T) {
+	truncateTables(t)
+	setSubscriptionRebateGlobalsForTest(t, 1000, 99)
+	operation_setting.Price = 7.25
+	setting.StripeUnitPrice = 8
+
+	insertInviteRebateUser(t, 21, 0)
+	epayPlan := &SubscriptionPlan{
+		Id:            704,
+		Title:         "Epay CNY Plan",
+		PriceAmount:   72.5,
+		Currency:      "CNY",
+		DurationUnit:  SubscriptionDurationMonth,
+		DurationValue: 1,
+		Enabled:       true,
+		TotalAmount:   1000,
+	}
+	require.NoError(t, DB.Create(epayPlan).Error)
+	insertSubscriptionRebateOrder(t, "sub-rebate-epay-price", 21, epayPlan, 72.5, PaymentProviderEpay)
+	epayOrder := GetSubscriptionOrderByTradeNo("sub-rebate-epay-price")
+	require.NotNil(t, epayOrder)
+	assert.Equal(t, 10000, epayOrder.RebateBaseQuota)
+
+	stripePlan := &SubscriptionPlan{
+		Id:            705,
+		Title:         "Stripe CNY Plan",
+		PriceAmount:   80,
+		Currency:      "CNY",
+		DurationUnit:  SubscriptionDurationMonth,
+		DurationValue: 1,
+		Enabled:       true,
+		TotalAmount:   1000,
+	}
+	require.NoError(t, DB.Create(stripePlan).Error)
+	insertSubscriptionRebateOrder(t, "sub-rebate-stripe-price", 21, stripePlan, 80, PaymentProviderStripe)
+	stripeOrder := GetSubscriptionOrderByTradeNo("sub-rebate-stripe-price")
+	require.NotNil(t, stripeOrder)
+	assert.Equal(t, 10000, stripeOrder.RebateBaseQuota)
 }

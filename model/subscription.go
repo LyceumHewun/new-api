@@ -10,6 +10,7 @@ import (
 
 	"github.com/QuantumNous/new-api/common"
 	"github.com/QuantumNous/new-api/pkg/cachex"
+	"github.com/QuantumNous/new-api/setting"
 	"github.com/QuantumNous/new-api/setting/operation_setting"
 	"github.com/samber/hot"
 	"github.com/shopspring/decimal"
@@ -537,10 +538,23 @@ func CreateUserSubscriptionFromPlanTx(tx *gorm.DB, userId int, plan *Subscriptio
 	return sub, nil
 }
 
-func subscriptionRebateExchangeRate() decimal.Decimal {
-	rate := operation_setting.USDExchangeRate
+func subscriptionRebateTopupPrice(paymentProvider string) decimal.Decimal {
+	rate := 0.0
+	switch paymentProvider {
+	case PaymentProviderStripe:
+		rate = setting.StripeUnitPrice
+	case PaymentProviderWaffo:
+		rate = setting.WaffoUnitPrice
+	case PaymentProviderWaffoPancake:
+		rate = setting.WaffoPancakeUnitPrice
+	default:
+		rate = operation_setting.Price
+	}
 	if rate <= 0 {
 		rate = operation_setting.Price
+	}
+	if rate <= 0 {
+		rate = operation_setting.USDExchangeRate
 	}
 	if rate <= 0 {
 		rate = 7.3
@@ -557,7 +571,7 @@ func calculateSubscriptionRebateBaseQuota(money float64, paymentProvider string,
 		return 0
 	}
 	if paymentProvider == PaymentProviderEpay || strings.ToUpper(strings.TrimSpace(currency)) == "CNY" {
-		paid = paid.Div(subscriptionRebateExchangeRate())
+		paid = paid.Div(subscriptionRebateTopupPrice(paymentProvider))
 	}
 	return int(paid.Mul(decimal.NewFromFloat(common.QuotaPerUnit)).IntPart())
 }
