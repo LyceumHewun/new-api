@@ -11,9 +11,11 @@ import (
 
 func TestManualCompletePaidOrder_CompletesSubscriptionOrder(t *testing.T) {
 	truncateTables(t)
+	setInviteRebateSettingForTest(-1, []float64{0.1})
 	setSubscriptionRebateGlobalsForTest(t, 1000, 7.25)
 
-	insertUserForPaymentGuardTest(t, 401, 0)
+	insertInviteRebateUser(t, 401, 403)
+	insertInviteRebateUser(t, 403, 0)
 	plan := &SubscriptionPlan{
 		Id:            801,
 		Title:         "Manual Complete Plan",
@@ -56,6 +58,18 @@ func TestManualCompletePaidOrder_CompletesSubscriptionOrder(t *testing.T) {
 	assert.EqualValues(t, 0, topUp.Amount)
 	assert.EqualValues(t, 1, countUserSubscriptionsForPaymentGuardTest(t, 401))
 	assert.Equal(t, 0, getUserQuotaForPaymentGuardTest(t, 401))
+	affQuota, affHistory := getInviteQuotaForTest(t, 403)
+	assert.Equal(t, 999, affQuota)
+	assert.Equal(t, 999, affHistory)
+
+	var rebateRecord InviteRebateRecord
+	require.NoError(t, DB.Where("source_id = ?", "sub-admin-complete").First(&rebateRecord).Error)
+	assert.Equal(t, PaymentProviderStripe, rebateRecord.SourceType)
+	assert.Equal(t, 9990, rebateRecord.BaseQuota)
+
+	var topupLog Log
+	require.NoError(t, DB.Where("user_id = ? AND content LIKE ?", 401, "管理员补单成功，订阅套餐:%").First(&topupLog).Error)
+	assert.Equal(t, "127.0.0.1", topupLog.Ip)
 }
 
 func TestManualCompletePaidOrder_FallsBackToTopUp(t *testing.T) {

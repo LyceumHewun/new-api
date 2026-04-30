@@ -594,6 +594,14 @@ func subscriptionOrderRebateBaseQuota(order *SubscriptionOrder, plan *Subscripti
 // expectedPaymentProvider guards against cross-gateway callback attacks (empty skips the check).
 // actualPaymentMethod updates the order's PaymentMethod to reflect the real payment type used (empty skips update).
 func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedPaymentProvider string, actualPaymentMethod string) error {
+	return completeSubscriptionOrder(tradeNo, providerPayload, expectedPaymentProvider, actualPaymentMethod, "")
+}
+
+func CompleteSubscriptionOrderForAdmin(tradeNo string, callerIp string) error {
+	return completeSubscriptionOrder(tradeNo, "", "", "", callerIp)
+}
+
+func completeSubscriptionOrder(tradeNo string, providerPayload string, expectedPaymentProvider string, actualPaymentMethod string, adminCallerIp string) error {
 	if tradeNo == "" {
 		return errors.New("tradeNo is empty")
 	}
@@ -673,8 +681,12 @@ func CompleteSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 		_ = UpdateUserGroupCache(logUserId, upgradeGroup)
 	}
 	if logUserId > 0 {
-		msg := fmt.Sprintf("订阅购买成功，套餐: %s，支付金额: %.2f，支付方式: %s", logPlanTitle, logMoney, logPaymentMethod)
-		RecordLog(logUserId, LogTypeTopup, msg)
+		if adminCallerIp != "" {
+			RecordTopupLog(logUserId, fmt.Sprintf("管理员补单成功，订阅套餐: %s，支付金额：%.2f", logPlanTitle, logMoney), adminCallerIp, logPaymentMethod, "admin")
+		} else {
+			msg := fmt.Sprintf("订阅购买成功，套餐: %s，支付金额: %.2f，支付方式: %s", logPlanTitle, logMoney, logPaymentMethod)
+			RecordLog(logUserId, LogTypeTopup, msg)
+		}
 	}
 	RecordInviteRebateLogs(rebateRecords)
 	return nil

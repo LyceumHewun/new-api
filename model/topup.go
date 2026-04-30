@@ -462,7 +462,7 @@ func ManualCompletePaidOrder(tradeNo string, callerIp string) error {
 	if tradeNo == "" {
 		return errors.New("未提供订单号")
 	}
-	if err := CompleteSubscriptionOrder(tradeNo, "", "", ""); err != nil {
+	if err := CompleteSubscriptionOrderForAdmin(tradeNo, callerIp); err != nil {
 		if !errors.Is(err, ErrSubscriptionOrderNotFound) {
 			return err
 		}
