@@ -51,10 +51,10 @@ function getSubscriptionDurationSeconds(plan) {
 
 export function getSubscriptionPlanQuotaDisplay(plan) {
   const periodAmount = Number(plan?.total_amount || 0);
-  const resetSeconds =
-    plan?.quota_reset_period === 'custom'
-      ? Number(plan?.quota_reset_custom_seconds || 0)
-      : 0;
+  const isCustomReset = plan?.quota_reset_period === 'custom';
+  const resetSeconds = isCustomReset
+    ? Number(plan?.quota_reset_custom_seconds || 0)
+    : 0;
   const durationSeconds = getSubscriptionDurationSeconds(plan);
   const cycleCount =
     periodAmount > 0 && resetSeconds > 0 && durationSeconds > 0
@@ -65,6 +65,7 @@ export function getSubscriptionPlanQuotaDisplay(plan) {
     cycleCount,
     periodAmount,
     totalAmount: periodAmount * cycleCount,
-    showPeriodAmount: cycleCount > 1,
+    showPeriodAmount:
+      periodAmount > 0 && resetSeconds > 0 && durationSeconds > 0,
   };
 }
