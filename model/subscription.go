@@ -682,7 +682,7 @@ func completeSubscriptionOrder(tradeNo string, providerPayload string, expectedP
 	}
 	if logUserId > 0 {
 		if adminCallerIp != "" {
-			RecordTopupLog(logUserId, fmt.Sprintf("管理员补单成功，订阅套餐: %s，支付金额：%.2f", logPlanTitle, logMoney), adminCallerIp, logPaymentMethod, "admin")
+			RecordTopupLog(logUserId, fmt.Sprintf("管理员补单成功，订阅套餐: %s，支付金额：%f", logPlanTitle, logMoney), adminCallerIp, logPaymentMethod, "admin")
 		} else {
 			msg := fmt.Sprintf("订阅购买成功，套餐: %s，支付金额: %.2f，支付方式: %s", logPlanTitle, logMoney, logPaymentMethod)
 			RecordLog(logUserId, LogTypeTopup, msg)

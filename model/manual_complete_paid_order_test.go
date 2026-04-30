@@ -68,7 +68,7 @@ func TestManualCompletePaidOrder_CompletesSubscriptionOrder(t *testing.T) {
 	assert.Equal(t, 9990, rebateRecord.BaseQuota)
 
 	var topupLog Log
-	require.NoError(t, DB.Where("user_id = ? AND content LIKE ?", 401, "管理员补单成功，订阅套餐:%").First(&topupLog).Error)
+	require.NoError(t, DB.Where("user_id = ? AND content LIKE ?", 401, "管理员补单成功，订阅套餐:%，支付金额：%").First(&topupLog).Error)
 	assert.Equal(t, "127.0.0.1", topupLog.Ip)
 }
 
