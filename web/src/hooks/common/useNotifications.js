@@ -18,10 +18,13 @@ For commercial licensing, please contact support@quantumnous.com
 */
 
 import { useState, useEffect } from 'react';
+import { API } from '../../helpers';
 
 export const useNotifications = (statusState) => {
   const [noticeVisible, setNoticeVisible] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [defaultTab, setDefaultTab] = useState('inApp');
+  const [hasNoticeContent, setHasNoticeContent] = useState(false);
 
   const announcements = statusState?.status?.announcements || [];
 
@@ -58,8 +61,31 @@ export const useNotifications = (statusState) => {
 
   // Effects
   useEffect(() => {
-    setUnreadCount(calculateUnreadCount());
-  }, [announcements]);
+    const nextUnreadCount = calculateUnreadCount();
+    setUnreadCount(nextUnreadCount);
+    if (nextUnreadCount > 0 && !hasNoticeContent) {
+      setDefaultTab('system');
+      setNoticeVisible(true);
+    }
+  }, [announcements, hasNoticeContent]);
+
+  useEffect(() => {
+    const checkNoticeAndShow = async () => {
+      try {
+        const res = await API.get('/api/notice');
+        const { success, data } = res.data;
+        if (success && data && data.trim() !== '') {
+          setHasNoticeContent(true);
+          setDefaultTab('inApp');
+          setNoticeVisible(true);
+        }
+      } catch (error) {
+        console.error('获取公告失败:', error);
+      }
+    };
+
+    checkNoticeAndShow();
+  }, []);
 
   // Actions
   const handleNoticeOpen = () => {
@@ -86,6 +112,7 @@ export const useNotifications = (statusState) => {
   return {
     noticeVisible,
     unreadCount,
+    defaultTab,
     announcements,
     handleNoticeOpen,
     handleNoticeClose,

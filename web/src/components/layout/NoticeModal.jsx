@@ -76,12 +76,6 @@ const NoticeModal = ({
     });
   }, [announcements, unreadSet]);
 
-  const handleCloseTodayNotice = () => {
-    const today = new Date().toDateString();
-    localStorage.setItem('notice_close_date', today);
-    onClose();
-  };
-
   const displayNotice = async () => {
     setLoading(true);
     try {
@@ -237,9 +231,6 @@ const NoticeModal = ({
       onCancel={onClose}
       footer={
         <div className='flex justify-end'>
-          <Button type='secondary' onClick={handleCloseTodayNotice}>
-            {t('今日关闭')}
-          </Button>
           <Button type='primary' onClick={onClose}>
             {t('关闭公告')}
           </Button>
