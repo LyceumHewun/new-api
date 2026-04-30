@@ -96,7 +96,7 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		CreateTime:      time.Now().Unix(),
 		Status:          common.TopUpStatusPending,
 	}
-	if err := order.Insert(); err != nil {
+	if err := order.InsertWithBill(plan); err != nil {
 		common.ApiErrorMsg(c, "创建订单失败")
 		return
 	}

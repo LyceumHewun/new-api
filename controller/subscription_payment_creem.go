@@ -91,7 +91,7 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 		CreateTime:      time.Now().Unix(),
 		Status:          common.TopUpStatusPending,
 	}
-	if err := order.Insert(); err != nil {
+	if err := order.InsertWithBill(plan); err != nil {
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "创建订单失败"})
 		return
 	}
@@ -107,6 +107,7 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 
 	checkoutUrl, err := genCreemLink(c.Request.Context(), referenceId, product, user.Email, user.Username)
 	if err != nil {
+		_ = model.ExpireSubscriptionOrder(referenceId, model.PaymentProviderCreem)
 		logger.LogError(c.Request.Context(), fmt.Sprintf("Creem 订阅支付链接创建失败 trade_no=%s product_id=%s error=%q", referenceId, product.ProductId, err.Error()))
 		c.JSON(http.StatusOK, gin.H{"message": "error", "data": "拉起支付失败"})
 		return
