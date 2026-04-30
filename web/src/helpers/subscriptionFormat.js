@@ -32,3 +32,39 @@ export function formatSubscriptionResetPeriod(plan, t) {
   }
   return t('不重置');
 }
+
+function getSubscriptionDurationSeconds(plan) {
+  const unit = plan?.duration_unit || 'month';
+  const value = Number(plan?.duration_value || 1);
+  if (unit === 'year' || unit === 'month') {
+    const start = new Date();
+    const end = new Date(start.getTime());
+    if (unit === 'year') end.setFullYear(end.getFullYear() + value);
+    if (unit === 'month') end.setMonth(end.getMonth() + value);
+    return Math.max(0, Math.floor((end.getTime() - start.getTime()) / 1000));
+  }
+  if (unit === 'day') return value * 86400;
+  if (unit === 'hour') return value * 3600;
+  if (unit === 'custom') return Number(plan?.custom_seconds || 0);
+  return 0;
+}
+
+export function getSubscriptionPlanQuotaDisplay(plan) {
+  const periodAmount = Number(plan?.total_amount || 0);
+  const resetSeconds =
+    plan?.quota_reset_period === 'custom'
+      ? Number(plan?.quota_reset_custom_seconds || 0)
+      : 0;
+  const durationSeconds = getSubscriptionDurationSeconds(plan);
+  const cycleCount =
+    periodAmount > 0 && resetSeconds > 0 && durationSeconds > 0
+      ? Math.max(1, Math.ceil(durationSeconds / resetSeconds))
+      : 1;
+
+  return {
+    cycleCount,
+    periodAmount,
+    totalAmount: periodAmount * cycleCount,
+    showPeriodAmount: cycleCount > 1,
+  };
+}

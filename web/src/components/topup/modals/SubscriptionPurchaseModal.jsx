@@ -35,6 +35,7 @@ import { renderQuota } from '../../../helpers';
 import {
   formatSubscriptionDuration,
   formatSubscriptionResetPeriod,
+  getSubscriptionPlanQuotaDisplay,
 } from '../../../helpers/subscriptionFormat';
 
 const { Text } = Typography;
@@ -63,7 +64,8 @@ const SubscriptionPurchaseModal = ({
   onPayEpay,
 }) => {
   const plan = selectedPlan?.plan;
-  const totalAmount = Number(plan?.total_amount || 0);
+  const quotaDisplay = getSubscriptionPlanQuotaDisplay(plan);
+  const totalAmount = quotaDisplay.totalAmount;
   const { symbol } = getPlanCurrencyConfig(plan?.currency);
   const price = plan ? Number(plan.price_amount || 0) : 0;
   const displayPrice = price.toFixed(Number.isInteger(price) ? 0 : 2);
@@ -136,7 +138,13 @@ const SubscriptionPurchaseModal = ({
                 <div className='flex items-center'>
                   <Package size={14} className='mr-1 text-slate-500' />
                   {totalAmount > 0 ? (
-                    <Tooltip content={`${t('原生额度')}：${totalAmount}`}>
+                    <Tooltip
+                      content={
+                        quotaDisplay.showPeriodAmount
+                          ? `${t('原生额度')}：${quotaDisplay.periodAmount} × ${quotaDisplay.cycleCount}`
+                          : `${t('原生额度')}：${totalAmount}`
+                      }
+                    >
                       <Text className='text-slate-900 dark:text-slate-100'>
                         {renderQuota(totalAmount)}
                       </Text>
@@ -148,6 +156,23 @@ const SubscriptionPurchaseModal = ({
                   )}
                 </div>
               </div>
+              {quotaDisplay.showPeriodAmount && (
+                <div className='flex justify-between items-center'>
+                  <Text strong className='text-slate-700 dark:text-slate-200'>
+                    {t('周期额度')}：
+                  </Text>
+                  <div className='flex items-center'>
+                    <Package size={14} className='mr-1 text-slate-500' />
+                    <Tooltip
+                      content={`${t('原生额度')}：${quotaDisplay.periodAmount}`}
+                    >
+                      <Text className='text-slate-900 dark:text-slate-100'>
+                        {renderQuota(quotaDisplay.periodAmount)}
+                      </Text>
+                    </Tooltip>
+                  </div>
+                </div>
+              )}
               {plan?.upgrade_group ? (
                 <div className='flex justify-between items-center'>
                   <Text strong className='text-slate-700 dark:text-slate-200'>

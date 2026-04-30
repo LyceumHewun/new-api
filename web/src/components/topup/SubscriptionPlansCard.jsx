@@ -36,6 +36,7 @@ import SubscriptionPurchaseModal from './modals/SubscriptionPurchaseModal';
 import {
   formatSubscriptionDuration,
   formatSubscriptionResetPeriod,
+  getSubscriptionPlanQuotaDisplay,
 } from '../../helpers/subscriptionFormat';
 
 const { Text } = Typography;
@@ -494,7 +495,8 @@ const SubscriptionPlansCard = ({
             <div className='grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-5 w-full px-1'>
               {plans.map((p, index) => {
                 const plan = p?.plan;
-                const totalAmount = Number(plan?.total_amount || 0);
+                const quotaDisplay = getSubscriptionPlanQuotaDisplay(plan);
+                const totalAmount = quotaDisplay.totalAmount;
                 const { symbol } = getPlanCurrencyConfig(plan?.currency);
                 const price = Number(plan?.price_amount || 0);
                 const displayPrice = price.toFixed(
@@ -522,9 +524,17 @@ const SubscriptionPlansCard = ({
                   totalAmount > 0
                     ? {
                         label: totalLabel,
-                        tooltip: `${t('原生额度')}：${totalAmount}`,
+                        tooltip: quotaDisplay.showPeriodAmount
+                          ? `${t('原生额度')}：${quotaDisplay.periodAmount} × ${quotaDisplay.cycleCount}`
+                          : `${t('原生额度')}：${totalAmount}`,
                       }
                     : { label: totalLabel },
+                  quotaDisplay.showPeriodAmount
+                    ? {
+                        label: `${t('周期额度')}: ${renderQuota(quotaDisplay.periodAmount)}`,
+                        tooltip: `${t('原生额度')}：${quotaDisplay.periodAmount}`,
+                      }
+                    : null,
                   limitLabel ? { label: limitLabel } : null,
                   upgradeLabel ? { label: upgradeLabel } : null,
                 ].filter(Boolean);
