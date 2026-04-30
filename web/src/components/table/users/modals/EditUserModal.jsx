@@ -93,6 +93,7 @@ const EditUserModal = (props) => {
     quota: 0,
     quota_amount: 0,
     group: 'default',
+    inviter_id: 0,
     remark: '',
   });
 
@@ -170,7 +171,11 @@ const EditUserModal = (props) => {
   const adjustQuota = async () => {
     const quotaVal = parseInt(adjustQuotaLocal) || 0;
     if (quotaVal <= 0 && adjustMode !== 'override') return;
-    if (adjustMode === 'override' && (adjustQuotaLocal === '' || adjustQuotaLocal == null)) return;
+    if (
+      adjustMode === 'override' &&
+      (adjustQuotaLocal === '' || adjustQuotaLocal == null)
+    )
+      return;
     setAdjustLoading(true);
     try {
       const res = await API.post('/api/user/manage', {
@@ -368,6 +373,18 @@ const EditUserModal = (props) => {
                         />
                       </Col>
 
+                      <Col span={24}>
+                        <Form.InputNumber
+                          field='inviter_id'
+                          label={t('邀请人')}
+                          placeholder={t('0 表示无邀请人')}
+                          min={0}
+                          precision={0}
+                          extraText={t('填写邀请人的用户 ID；0 表示清空邀请人')}
+                          style={{ width: '100%' }}
+                        />
+                      </Col>
+
                       <Col span={10}>
                         <Form.InputNumber
                           field='quota_amount'
@@ -401,7 +418,10 @@ const EditUserModal = (props) => {
                             ? `▾ ${t('收起原生额度输入')}`
                             : `▸ ${t('使用原生额度输入')}`}
                         </div>
-                        <div style={{ display: showQuotaInput ? 'block' : 'none' }} className='mt-2'>
+                        <div
+                          style={{ display: showQuotaInput ? 'block' : 'none' }}
+                          className='mt-2'
+                        >
                           <Form.InputNumber
                             field='quota'
                             label={t('额度')}
@@ -539,7 +559,10 @@ const EditUserModal = (props) => {
             ? `▾ ${t('收起原生额度输入')}`
             : `▸ ${t('使用原生额度输入')}`}
         </div>
-        <div style={{ display: showAdjustQuotaRaw ? 'block' : 'none' }} className='mt-2'>
+        <div
+          style={{ display: showAdjustQuotaRaw ? 'block' : 'none' }}
+          className='mt-2'
+        >
           <div className='mb-1'>
             <Text size='small'>{t('额度')}</Text>
           </div>
