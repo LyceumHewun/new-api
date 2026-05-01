@@ -32,7 +32,6 @@ interface NotificationDialogProps {
   notice: string
   announcements: AnnouncementItem[]
   loading: boolean
-  onCloseToday: () => void
 }
 
 /**
@@ -222,7 +221,6 @@ export function NotificationDialog({
   notice,
   announcements,
   loading,
-  onCloseToday,
 }: NotificationDialogProps) {
   const { t } = useTranslation()
   return (
@@ -260,10 +258,7 @@ export function NotificationDialog({
           </TabsContent>
         </Tabs>
 
-        <DialogFooter className='gap-2'>
-          <Button variant='outline' onClick={onCloseToday}>
-            {t('Close Today')}
-          </Button>
+        <DialogFooter>
           <Button onClick={() => onOpenChange(false)}>{t('Close')}</Button>
         </DialogFooter>
       </DialogContent>

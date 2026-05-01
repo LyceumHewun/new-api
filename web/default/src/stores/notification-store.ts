@@ -6,15 +6,11 @@ interface NotificationState {
   lastReadNotice: string
   // Array of read announcement keys (id or content hash)
   readAnnouncementKeys: string[]
-  // Timestamp of last "Close Today" action
-  closedUntilDate: string | null
 
   // Actions
   markNoticeRead: (noticeContent: string) => void
   markAnnouncementsRead: (keys: string[]) => void
-  setClosedUntilDate: (date: string | null) => void
   isAnnouncementRead: (key: string) => boolean
-  isNoticeClosed: () => boolean
 }
 
 /**
@@ -26,7 +22,6 @@ export const useNotificationStore = create<NotificationState>()(
     (set, get) => ({
       lastReadNotice: '',
       readAnnouncementKeys: [],
-      closedUntilDate: null,
 
       markNoticeRead: (noticeContent: string) => {
         // Persist the full trimmed content so edits beyond 100 chars register
@@ -42,20 +37,8 @@ export const useNotificationStore = create<NotificationState>()(
         }))
       },
 
-      setClosedUntilDate: (date: string | null) => {
-        set({ closedUntilDate: date })
-      },
-
       isAnnouncementRead: (key: string) => {
         return get().readAnnouncementKeys.includes(key)
-      },
-
-      isNoticeClosed: () => {
-        const { closedUntilDate } = get()
-        if (!closedUntilDate) return false
-
-        const today = new Date().toDateString()
-        return closedUntilDate === today
       },
     }),
     {
@@ -63,7 +46,6 @@ export const useNotificationStore = create<NotificationState>()(
       partialize: (state) => ({
         lastReadNotice: state.lastReadNotice,
         readAnnouncementKeys: state.readAnnouncementKeys,
-        closedUntilDate: state.closedUntilDate,
       }),
     }
   )

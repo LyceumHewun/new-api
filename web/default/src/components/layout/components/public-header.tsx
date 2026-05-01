@@ -293,7 +293,6 @@ export function PublicHeader(props: PublicHeaderProps) {
           notice={notifications.notice}
           announcements={notifications.announcements}
           loading={notifications.loading}
-          onCloseToday={notifications.closeToday}
         />
       )}
     </>

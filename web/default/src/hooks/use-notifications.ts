@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNotificationStore } from '@/stores/notification-store'
 import { getNotice } from '@/lib/api'
@@ -74,8 +74,6 @@ export function useNotifications() {
     markNoticeRead,
     markAnnouncementsRead,
     isAnnouncementRead,
-    isNoticeClosed,
-    setClosedUntilDate,
   } = useNotificationStore()
 
   // Extract notice content
@@ -102,14 +100,46 @@ export function useNotifications() {
     }
   }, [noticeContent, lastReadNotice, announcements, isAnnouncementRead])
 
-  // Handle dialog open
-  const handleOpenDialog = (tab?: 'notice' | 'announcements') => {
-    // Mark Notice as read when opening dialog
-    if (noticeContent) {
+  const markAnnouncements = () => {
+    if (announcements.length === 0) return
+    const allKeys = announcements.map((item: Record<string, unknown>) =>
+      getAnnouncementKey(item)
+    )
+    markAnnouncementsRead(allKeys)
+  }
+
+  const markTabRead = (tab: 'notice' | 'announcements') => {
+    if (tab === 'notice' && noticeContent) {
       markNoticeRead(noticeContent)
     }
+    if (tab === 'announcements') {
+      markAnnouncements()
+    }
+  }
 
-    setActiveTab(tab || 'notice')
+  const getPreferredTab = (): 'notice' | 'announcements' => {
+    if (noticeContent) return 'notice'
+    if (announcements.length > 0) return 'announcements'
+    return 'notice'
+  }
+
+  useEffect(() => {
+    if (!noticeContent || noticeContent === lastReadNotice) return
+    setActiveTab('notice')
+    setDialogOpen(true)
+  }, [lastReadNotice, noticeContent])
+
+  useEffect(() => {
+    if (noticeContent || unreadCounts.announcements <= 0) return
+    setActiveTab('announcements')
+    setDialogOpen(true)
+  }, [noticeContent, unreadCounts.announcements])
+
+  // Handle dialog open
+  const handleOpenDialog = (tab?: 'notice' | 'announcements') => {
+    const nextTab = tab || getPreferredTab()
+    markTabRead(nextTab)
+    setActiveTab(nextTab)
     setDialogOpen(true)
   }
 
@@ -118,18 +148,21 @@ export function useNotifications() {
     setActiveTab(tab)
 
     if (tab === 'announcements' && announcements.length > 0) {
-      const allKeys = announcements.map((item: Record<string, unknown>) =>
-        getAnnouncementKey(item)
-      )
-      markAnnouncementsRead(allKeys)
+      markAnnouncements()
     }
   }
 
-  // Handle "Close Today" action
-  const handleCloseToday = () => {
-    const today = new Date().toDateString()
-    setClosedUntilDate(today)
+  const closeDialog = () => {
+    markTabRead(activeTab)
     setDialogOpen(false)
+  }
+
+  const handleDialogOpenChange = (open: boolean) => {
+    if (open) {
+      handleOpenDialog(activeTab)
+      return
+    }
+    closeDialog()
   }
 
   return {
@@ -145,17 +178,13 @@ export function useNotifications() {
 
     // Dialog state
     dialogOpen,
-    setDialogOpen,
+    setDialogOpen: handleDialogOpenChange,
     activeTab,
     setActiveTab: handleTabChange,
 
     // Actions
     openDialog: handleOpenDialog,
-    closeDialog: () => setDialogOpen(false),
-    closeToday: handleCloseToday,
+    closeDialog,
     refetchNotice,
-
-    // Status
-    isNoticeClosed: isNoticeClosed(),
   }
 }

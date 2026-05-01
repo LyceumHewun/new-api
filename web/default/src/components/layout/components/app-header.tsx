@@ -125,7 +125,6 @@ export function AppHeader({
           notice={notifications.notice}
           announcements={notifications.announcements}
           loading={notifications.loading}
-          onCloseToday={notifications.closeToday}
         />
       )}
     </>
