@@ -248,6 +248,14 @@ export function Wallet(props: WalletProps) {
         </SectionPageLayout.Description>
         <SectionPageLayout.Content>
           <div className='mx-auto flex w-full max-w-7xl flex-col gap-4 sm:gap-5'>
+            <AffiliateRewardsCard
+              user={user}
+              affiliateLink={affiliateLink}
+              onTransfer={() => setTransferDialogOpen(true)}
+              loading={affiliateLoading}
+              inviteRebateSetting={topupInfo?.invite_rebate_setting}
+            />
+
             <WalletStatsCard user={user} loading={userLoading} />
 
             <div
@@ -296,14 +304,6 @@ export function Wallet(props: WalletProps) {
                 onAvailabilityChange={handleSubscriptionAvailabilityChange}
               />
             </div>
-
-            <AffiliateRewardsCard
-              user={user}
-              affiliateLink={affiliateLink}
-              onTransfer={() => setTransferDialogOpen(true)}
-              loading={affiliateLoading}
-              inviteRebateSetting={topupInfo?.invite_rebate_setting}
-            />
           </div>
         </SectionPageLayout.Content>
       </SectionPageLayout>
