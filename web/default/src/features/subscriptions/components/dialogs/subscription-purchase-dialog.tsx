@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Crown, CalendarClock, Package } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
+import { formatQuota } from '@/lib/format'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Button } from '@/components/ui/button'
 import {
@@ -17,14 +18,23 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { GroupBadge } from '@/components/group-badge'
 import { Separator } from '@/components/ui/separator'
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip'
+import { GroupBadge } from '@/components/group-badge'
 import {
   paySubscriptionStripe,
   paySubscriptionCreem,
   paySubscriptionEpay,
 } from '../../api'
-import { formatDuration, formatResetPeriod } from '../../lib'
+import {
+  formatDuration,
+  formatResetPeriod,
+  getSubscriptionPlanQuotaDisplay,
+} from '../../lib'
 import type { PlanRecord } from '../../types'
 
 interface PaymentMethod {
@@ -65,8 +75,11 @@ export function SubscriptionPurchaseDialog(props: Props) {
   const hasEpay =
     props.enableOnlineTopUp && (props.epayMethods || []).length > 0
   const hasAnyPayment = hasStripe || hasCreem || hasEpay
-  const totalAmount = Number(plan.total_amount || 0)
-  const price = Number(plan.price_amount || 0).toFixed(2)
+  const quotaDisplay = getSubscriptionPlanQuotaDisplay(plan)
+  const totalAmount = quotaDisplay.totalAmount
+  const priceAmount = Number(plan.price_amount || 0)
+  const price = priceAmount.toFixed(Number.isInteger(priceAmount) ? 0 : 2)
+  const currencySymbol = plan.currency === 'CNY' ? '¥' : '$'
   const limitReached =
     (props.purchaseLimit || 0) > 0 &&
     (props.purchaseCount || 0) >= (props.purchaseLimit || 0)
@@ -200,14 +213,56 @@ export function SubscriptionPurchaseDialog(props: Props) {
                 <span className='text-sm'>{formatResetPeriod(plan, t)}</span>
               </div>
             )}
+            {quotaDisplay.showPeriodAmount && (
+              <div className='flex items-center justify-between'>
+                <span className='text-muted-foreground text-sm'>
+                  {t('Period Quota')}
+                </span>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className='cursor-help text-sm'>
+                      {formatQuota(quotaDisplay.periodAmount)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('Raw Quota')}: {quotaDisplay.periodAmount}
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            )}
+            {quotaDisplay.showPeriodAmount && (
+              <div className='flex justify-between'>
+                <span className='text-muted-foreground text-sm'>
+                  {t('Cycle Count')}
+                </span>
+                <span className='text-sm'>{quotaDisplay.cycleCount}</span>
+              </div>
+            )}
             <div className='flex items-center justify-between'>
               <span className='text-muted-foreground text-sm'>
                 {t('Total Quota')}
               </span>
-              <span className='flex items-center gap-1 text-sm'>
-                <Package className='h-3.5 w-3.5' />
-                {totalAmount > 0 ? totalAmount : t('Unlimited')}
-              </span>
+              {totalAmount > 0 ? (
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <span className='flex cursor-help items-center gap-1 text-sm'>
+                      <Package className='h-3.5 w-3.5' />
+                      {formatQuota(totalAmount)}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {t('Raw Quota')}:{' '}
+                    {quotaDisplay.showPeriodAmount
+                      ? `${quotaDisplay.periodAmount} x ${quotaDisplay.cycleCount}`
+                      : totalAmount}
+                  </TooltipContent>
+                </Tooltip>
+              ) : (
+                <span className='flex items-center gap-1 text-sm'>
+                  <Package className='h-3.5 w-3.5' />
+                  {t('Unlimited')}
+                </span>
+              )}
             </div>
             {plan.upgrade_group && (
               <div className='flex items-center justify-between'>
@@ -220,7 +275,10 @@ export function SubscriptionPurchaseDialog(props: Props) {
             <Separator />
             <div className='flex items-center justify-between'>
               <span className='text-sm font-medium'>{t('Amount Due')}</span>
-              <span className='text-primary text-lg font-bold'>${price}</span>
+              <span className='text-primary text-lg font-bold'>
+                {currencySymbol}
+                {price}
+              </span>
             </div>
           </div>
 
