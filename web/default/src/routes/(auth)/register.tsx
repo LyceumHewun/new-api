@@ -7,7 +7,7 @@ const searchSchema = z.object({
   aff: z.string().optional(),
 })
 
-export const Route = createFileRoute('/(auth)/sign-up')({
+export const Route = createFileRoute('/(auth)/register')({
   component: SignUp,
   validateSearch: searchSchema,
   beforeLoad: ({ search }) => {
