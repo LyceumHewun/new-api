@@ -1,9 +1,11 @@
 import { z } from 'zod'
 import { createFileRoute, redirect } from '@tanstack/react-router'
 import { useAuthStore } from '@/stores/auth-store'
+import { saveAffiliateCode } from '@/features/auth/lib/storage'
 import { SignIn } from '@/features/auth/sign-in'
 
 const searchSchema = z.object({
+  aff: z.string().optional(),
   redirect: z.string().optional(),
 })
 
@@ -11,6 +13,9 @@ export const Route = createFileRoute('/(auth)/sign-in')({
   component: SignIn,
   validateSearch: searchSchema,
   beforeLoad: async ({ search }) => {
+    if (search?.aff) {
+      saveAffiliateCode(search.aff)
+    }
     const { auth } = useAuthStore.getState()
 
     // 如果已经有用户信息，说明已登录
