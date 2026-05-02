@@ -59,16 +59,19 @@ const (
 
 // Redemption related messages
 const (
-	MsgRedemptionNameLength        = "redemption.name_length"
-	MsgRedemptionCountPositive     = "redemption.count_positive"
-	MsgRedemptionCountMax          = "redemption.count_max"
-	MsgRedemptionCreateFailed      = "redemption.create_failed"
-	MsgRedemptionInvalid           = "redemption.invalid"
-	MsgRedemptionUsed              = "redemption.used"
-	MsgRedemptionExpired           = "redemption.expired"
-	MsgRedemptionFailed            = "redemption.failed"
-	MsgRedemptionNotProvided       = "redemption.not_provided"
-	MsgRedemptionExpireTimeInvalid = "redemption.expire_time_invalid"
+	MsgRedemptionNameLength         = "redemption.name_length"
+	MsgRedemptionCountPositive      = "redemption.count_positive"
+	MsgRedemptionCountMax           = "redemption.count_max"
+	MsgRedemptionCreateFailed       = "redemption.create_failed"
+	MsgRedemptionInvalid            = "redemption.invalid"
+	MsgRedemptionUsed               = "redemption.used"
+	MsgRedemptionExpired            = "redemption.expired"
+	MsgRedemptionExhausted          = "redemption.exhausted"
+	MsgRedemptionAlreadyRedeemed    = "redemption.already_redeemed"
+	MsgRedemptionFailed             = "redemption.failed"
+	MsgRedemptionNotProvided        = "redemption.not_provided"
+	MsgRedemptionExpireTimeInvalid  = "redemption.expire_time_invalid"
+	MsgRedemptionRemainCountInvalid = "redemption.remain_count_invalid"
 )
 
 // User related messages

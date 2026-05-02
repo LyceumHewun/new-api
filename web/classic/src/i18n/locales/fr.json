@@ -3656,6 +3656,14 @@
     "默认用户消息": "Bonjour",
     "默认补全倍率": "Taux de complétion par défaut",
     "阶梯计费（表达式解析失败）": "Facturation par paliers (échec de l'analyse de l'expression)",
-    "阶梯计费（未匹配到对应阶梯）": "Facturation par paliers (aucun palier correspondant)"
+    "阶梯计费（未匹配到对应阶梯）": "Facturation par paliers (aucun palier correspondant)",
+    "剩余使用次数": "Utilisations restantes",
+    "-1 表示无限，0 表示已使用完": "-1 signifie illimité, 0 signifie entièrement utilisé",
+    "请输入剩余使用次数": "Veuillez saisir les utilisations restantes",
+    "剩余使用次数必须为 -1、0 或正整数": "Le nombre d'utilisations restantes doit être -1, 0 ou un entier positif",
+    "禁用邀请返现": "Désactiver la remise d'invitation",
+    "兑换此码时不触发邀请返现": "Ne pas déclencher les remises d'invitation lorsque ce code est utilisé",
+    "邀请返现": "Remise d'invitation",
+    "无限": "Illimité"
   }
 }

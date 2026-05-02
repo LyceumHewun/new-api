@@ -69,6 +69,8 @@ const EditRedemptionModal = (props) => {
     quota: 100000,
     amount: Number(quotaToDisplayAmount(100000).toFixed(6)),
     count: 1,
+    remain_count: 1,
+    disable_invite_rebate: false,
     expired_time: null,
   });
 
@@ -112,6 +114,15 @@ const EditRedemptionModal = (props) => {
     setLoading(true);
     let localInputs = { ...values };
     localInputs.count = parseInt(localInputs.count) || 0;
+    localInputs.remain_count = parseInt(localInputs.remain_count);
+    if (Number.isNaN(localInputs.remain_count)) {
+      localInputs.remain_count = 1;
+    }
+    if (localInputs.remain_count < -1) {
+      showError(t('剩余使用次数必须为 -1、0 或正整数'));
+      setLoading(false);
+      return;
+    }
     localInputs.quota = displayAmountToQuota(localInputs.amount);
     if (localInputs.quota <= 0) {
       showError(t('请输入金额'));
@@ -378,6 +389,38 @@ const EditRedemptionModal = (props) => {
                         />
                       </Col>
                     )}
+                    <Col span={12}>
+                      <Form.InputNumber
+                        field='remain_count'
+                        label={t('剩余使用次数')}
+                        min={-1}
+                        extraText={t('-1 表示无限，0 表示已使用完')}
+                        rules={[
+                          { required: true, message: t('请输入剩余使用次数') },
+                          {
+                            validator: (rule, v) => {
+                              const num = parseInt(v, 10);
+                              return num >= -1
+                                ? Promise.resolve()
+                                : Promise.reject(
+                                    t('剩余使用次数必须为 -1、0 或正整数'),
+                                  );
+                            },
+                          },
+                        ]}
+                        style={{ width: '100%' }}
+                        showClear
+                      />
+                    </Col>
+                    <Col span={12}>
+                      <Form.Switch
+                        field='disable_invite_rebate'
+                        label={t('禁用邀请返现')}
+                        checkedText={t('开')}
+                        uncheckedText={t('关')}
+                        extraText={t('兑换此码时不触发邀请返现')}
+                      />
+                    </Col>
                   </Row>
                 </Card>
               </div>

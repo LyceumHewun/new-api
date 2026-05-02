@@ -12,6 +12,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+type redemptionRequest struct {
+	Id                  int    `json:"id"`
+	Name                string `json:"name"`
+	Quota               int    `json:"quota"`
+	ExpiredTime         int64  `json:"expired_time"`
+	Count               int    `json:"count"`
+	Status              int    `json:"status"`
+	RemainCount         *int   `json:"remain_count"`
+	DisableInviteRebate *bool  `json:"disable_invite_rebate"`
+}
+
 func GetAllRedemptions(c *gin.Context) {
 	pageInfo := common.GetPageQuery(c)
 	redemptions, total, err := model.GetAllRedemptions(pageInfo.GetStartIdx(), pageInfo.GetPageSize())
@@ -59,38 +70,56 @@ func GetRedemption(c *gin.Context) {
 }
 
 func AddRedemption(c *gin.Context) {
-	redemption := model.Redemption{}
-	err := c.ShouldBindJSON(&redemption)
+	req := redemptionRequest{}
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	if utf8.RuneCountInString(redemption.Name) == 0 || utf8.RuneCountInString(redemption.Name) > 20 {
+	if utf8.RuneCountInString(req.Name) == 0 || utf8.RuneCountInString(req.Name) > 20 {
 		common.ApiErrorI18n(c, i18n.MsgRedemptionNameLength)
 		return
 	}
-	if redemption.Count <= 0 {
+	if req.Count <= 0 {
 		common.ApiErrorI18n(c, i18n.MsgRedemptionCountPositive)
 		return
 	}
-	if redemption.Count > 100 {
+	if req.Count > 100 {
 		common.ApiErrorI18n(c, i18n.MsgRedemptionCountMax)
 		return
 	}
-	if valid, msg := validateExpiredTime(c, redemption.ExpiredTime); !valid {
+	remainCount := 1
+	if req.RemainCount != nil {
+		remainCount = *req.RemainCount
+	}
+	if remainCount < -1 {
+		common.ApiErrorI18n(c, i18n.MsgRedemptionRemainCountInvalid)
+		return
+	}
+	disableInviteRebate := false
+	if req.DisableInviteRebate != nil {
+		disableInviteRebate = *req.DisableInviteRebate
+	}
+	if valid, msg := validateExpiredTime(c, req.ExpiredTime); !valid {
 		c.JSON(http.StatusOK, gin.H{"success": false, "message": msg})
 		return
 	}
 	var keys []string
-	for i := 0; i < redemption.Count; i++ {
+	for i := 0; i < req.Count; i++ {
 		key := common.GetUUID()
 		cleanRedemption := model.Redemption{
-			UserId:      c.GetInt("id"),
-			Name:        redemption.Name,
-			Key:         key,
-			CreatedTime: common.GetTimestamp(),
-			Quota:       redemption.Quota,
-			ExpiredTime: redemption.ExpiredTime,
+			UserId:              c.GetInt("id"),
+			Name:                req.Name,
+			Key:                 key,
+			Status:              common.RedemptionCodeStatusEnabled,
+			CreatedTime:         common.GetTimestamp(),
+			Quota:               req.Quota,
+			ExpiredTime:         req.ExpiredTime,
+			RemainCount:         remainCount,
+			DisableInviteRebate: disableInviteRebate,
+		}
+		if remainCount == 0 {
+			cleanRedemption.Status = common.RedemptionCodeStatusUsed
 		}
 		err = cleanRedemption.Insert()
 		if err != nil {
@@ -128,29 +157,44 @@ func DeleteRedemption(c *gin.Context) {
 
 func UpdateRedemption(c *gin.Context) {
 	statusOnly := c.Query("status_only")
-	redemption := model.Redemption{}
-	err := c.ShouldBindJSON(&redemption)
+	req := redemptionRequest{}
+	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
-	cleanRedemption, err := model.GetRedemptionById(redemption.Id)
+	cleanRedemption, err := model.GetRedemptionById(req.Id)
 	if err != nil {
 		common.ApiError(c, err)
 		return
 	}
 	if statusOnly == "" {
-		if valid, msg := validateExpiredTime(c, redemption.ExpiredTime); !valid {
+		if valid, msg := validateExpiredTime(c, req.ExpiredTime); !valid {
 			c.JSON(http.StatusOK, gin.H{"success": false, "message": msg})
 			return
 		}
 		// If you add more fields, please also update redemption.Update()
-		cleanRedemption.Name = redemption.Name
-		cleanRedemption.Quota = redemption.Quota
-		cleanRedemption.ExpiredTime = redemption.ExpiredTime
+		cleanRedemption.Name = req.Name
+		cleanRedemption.Quota = req.Quota
+		cleanRedemption.ExpiredTime = req.ExpiredTime
+		if req.RemainCount != nil {
+			if *req.RemainCount < -1 {
+				common.ApiErrorI18n(c, i18n.MsgRedemptionRemainCountInvalid)
+				return
+			}
+			cleanRedemption.RemainCount = *req.RemainCount
+			if cleanRedemption.RemainCount == 0 {
+				cleanRedemption.Status = common.RedemptionCodeStatusUsed
+			} else if cleanRedemption.Status == common.RedemptionCodeStatusUsed {
+				cleanRedemption.Status = common.RedemptionCodeStatusEnabled
+			}
+		}
+		if req.DisableInviteRebate != nil {
+			cleanRedemption.DisableInviteRebate = *req.DisableInviteRebate
+		}
 	}
 	if statusOnly != "" {
-		cleanRedemption.Status = redemption.Status
+		cleanRedemption.Status = req.Status
 	}
 	err = cleanRedemption.Update()
 	if err != nil {

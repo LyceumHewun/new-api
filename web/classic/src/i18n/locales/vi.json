@@ -1398,7 +1398,7 @@
     "已用": "Used",
     "已用/剩余": "Đã dùng/Còn lại",
     "已用额度": "Hạn ngạch đã dùng",
-    "已禁用": "Đã vô hiệu hóa",
+    "已禁用": "Đã tắt",
     "已禁用所有密钥": "Đã vô hiệu hóa tất cả các khóa",
     "已绑定": "Đã liên kết",
     "已绑定渠道": "Kênh đã liên kết",
@@ -4190,6 +4190,14 @@
     "默认用户消息": "Xin chào",
     "默认补全倍率": "Tỷ lệ hoàn thành mặc định",
     "阶梯计费（表达式解析失败）": "Thanh toán theo bậc (không phân tích được biểu thức)",
-    "阶梯计费（未匹配到对应阶梯）": "Thanh toán theo bậc (không tìm thấy bậc phù hợp)"
+    "阶梯计费（未匹配到对应阶梯）": "Thanh toán theo bậc (không tìm thấy bậc phù hợp)",
+    "剩余使用次数": "Số lượt dùng còn lại",
+    "-1 表示无限，0 表示已使用完": "-1 là không giới hạn, 0 là đã dùng hết",
+    "请输入剩余使用次数": "Vui lòng nhập số lượt dùng còn lại",
+    "剩余使用次数必须为 -1、0 或正整数": "Số lượt dùng còn lại phải là -1, 0 hoặc số nguyên dương",
+    "禁用邀请返现": "Tắt hoàn tiền giới thiệu",
+    "兑换此码时不触发邀请返现": "Không kích hoạt hoàn tiền giới thiệu khi mã này được đổi",
+    "邀请返现": "Hoàn tiền giới thiệu",
+    "无限": "Không giới hạn"
   }
 }

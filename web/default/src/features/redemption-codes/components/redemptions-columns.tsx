@@ -161,6 +161,40 @@ export function useRedemptionsColumns(): ColumnDef<Redemption>[] {
       },
     },
     {
+      accessorKey: 'remain_count',
+      meta: { label: t('Remaining Uses') },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('Remaining Uses')} />
+      ),
+      cell: ({ row }) => {
+        const remainCount = row.getValue('remain_count') as number
+        return (
+          <StatusBadge
+            label={remainCount === -1 ? t('Unlimited') : String(remainCount)}
+            variant={remainCount === 0 ? 'warning' : 'neutral'}
+            copyable={false}
+          />
+        )
+      },
+    },
+    {
+      accessorKey: 'disable_invite_rebate',
+      meta: { label: t('Invite Rebate'), mobileHidden: true },
+      header: ({ column }) => (
+        <DataTableColumnHeader column={column} title={t('Invite Rebate')} />
+      ),
+      cell: ({ row }) => {
+        const disabled = row.getValue('disable_invite_rebate') as boolean
+        return (
+          <StatusBadge
+            label={disabled ? t('Rebate disabled') : t('Rebate enabled')}
+            variant={disabled ? 'neutral' : 'success'}
+            copyable={false}
+          />
+        )
+      },
+    },
+    {
       accessorKey: 'created_time',
       meta: { label: t('Created'), mobileHidden: true },
       header: ({ column }) => (

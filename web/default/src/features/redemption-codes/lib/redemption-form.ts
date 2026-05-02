@@ -7,6 +7,16 @@ import {
 } from '../constants'
 import { type RedemptionFormData, type Redemption } from '../types'
 
+function isValidRemainCount(value: number | string) {
+  const count = Number(value)
+  return (
+    value !== '' &&
+    value !== '-' &&
+    Number.isInteger(count) &&
+    count >= REDEMPTION_VALIDATION.REMAIN_COUNT_MIN
+  )
+}
+
 // ============================================================================
 // Form Schema (use getRedemptionFormSchema(t) in components for i18n messages)
 // ============================================================================
@@ -25,6 +35,10 @@ export function getRedemptionFormSchema(t: TFunction) {
       .min(REDEMPTION_VALIDATION.COUNT_MIN, msg.COUNT_INVALID)
       .max(REDEMPTION_VALIDATION.COUNT_MAX, msg.COUNT_INVALID)
       .optional(),
+    remain_count: z
+      .union([z.number(), z.string()])
+      .refine(isValidRemainCount, msg.REMAIN_COUNT_INVALID),
+    disable_invite_rebate: z.boolean(),
   })
 }
 
@@ -33,6 +47,8 @@ export type RedemptionFormValues = {
   quota_dollars: number
   expired_time?: Date
   count?: number
+  remain_count: number | string
+  disable_invite_rebate: boolean
 }
 
 // ============================================================================
@@ -44,6 +60,8 @@ export const REDEMPTION_FORM_DEFAULT_VALUES: RedemptionFormValues = {
   quota_dollars: 10,
   expired_time: undefined,
   count: 1,
+  remain_count: 1,
+  disable_invite_rebate: false,
 }
 
 // ============================================================================
@@ -62,6 +80,8 @@ export function transformFormDataToPayload(
     expired_time: data.expired_time
       ? Math.floor(data.expired_time.getTime() / 1000)
       : 0,
+    remain_count: Number(data.remain_count),
+    disable_invite_rebate: data.disable_invite_rebate,
     count: data.count || 1,
   }
 }
@@ -80,5 +100,7 @@ export function transformRedemptionToFormDefaults(
         ? new Date(redemption.expired_time * 1000)
         : undefined,
     count: 1,
+    remain_count: redemption.remain_count,
+    disable_invite_rebate: redemption.disable_invite_rebate,
   }
 }

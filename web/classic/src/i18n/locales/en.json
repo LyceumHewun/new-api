@@ -3801,6 +3801,13 @@
     "见上方动态计费详情": "See dynamic pricing details above",
     "含时间条件": "Time rules",
     "含请求条件": "Request rules",
-    "（当前仅支持易支付接口，默认使用上方服务器地址作为回调地址！）": "(Currently only supports Epay interface, the default callback address is the server address above!)"
+    "（当前仅支持易支付接口，默认使用上方服务器地址作为回调地址！）": "(Currently only supports Epay interface, the default callback address is the server address above!)",
+    "剩余使用次数": "Remaining uses",
+    "-1 表示无限，0 表示已使用完": "-1 means unlimited, 0 means fully used",
+    "请输入剩余使用次数": "Please enter remaining uses",
+    "剩余使用次数必须为 -1、0 或正整数": "Remaining uses must be -1, 0, or a positive integer",
+    "禁用邀请返现": "Disable invite rebate",
+    "兑换此码时不触发邀请返现": "Do not trigger invite rebates when this code is redeemed",
+    "邀请返现": "Invite rebate"
   }
 }

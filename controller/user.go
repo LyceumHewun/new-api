@@ -1113,8 +1113,8 @@ func TopUp(c *gin.Context) {
 	}
 	quota, err := model.Redeem(req.Key, id)
 	if err != nil {
-		if errors.Is(err, model.ErrRedeemFailed) {
-			common.ApiErrorI18n(c, i18n.MsgRedeemFailed)
+		if msgKey := redeemErrorMessageKey(err); msgKey != "" {
+			common.ApiErrorI18n(c, msgKey)
 			return
 		}
 		common.ApiError(c, err)
@@ -1125,6 +1125,27 @@ func TopUp(c *gin.Context) {
 		"message": "",
 		"data":    quota,
 	})
+}
+
+func redeemErrorMessageKey(err error) string {
+	switch {
+	case errors.Is(err, model.ErrRedemptionNotProvided):
+		return i18n.MsgRedemptionNotProvided
+	case errors.Is(err, model.ErrRedemptionInvalid):
+		return i18n.MsgRedemptionInvalid
+	case errors.Is(err, model.ErrRedemptionUsed):
+		return i18n.MsgRedemptionUsed
+	case errors.Is(err, model.ErrRedemptionExpired):
+		return i18n.MsgRedemptionExpired
+	case errors.Is(err, model.ErrRedemptionExhausted):
+		return i18n.MsgRedemptionExhausted
+	case errors.Is(err, model.ErrRedemptionAlreadyRedeemed):
+		return i18n.MsgRedemptionAlreadyRedeemed
+	case errors.Is(err, model.ErrRedeemFailed):
+		return i18n.MsgRedeemFailed
+	default:
+		return ""
+	}
 }
 
 type UpdateUserSettingRequest struct {
