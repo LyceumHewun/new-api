@@ -1,4 +1,5 @@
 import { api } from './api'
+import { getAffiliateCode } from '@/features/auth/lib/storage'
 
 // ============================================================================
 // OAuth URL Builders
@@ -61,12 +62,8 @@ export function buildLinuxDOOAuthUrl(clientId: string, state: string): string {
  */
 export async function getOAuthState(): Promise<string | null> {
   try {
-    let path = '/api/oauth/state'
-    const affCode = localStorage.getItem('aff')
-    if (affCode && affCode.length > 0) {
-      path += `?aff=${affCode}`
-    }
-    const res = await api.get(path)
+    const aff = getAffiliateCode()
+    const res = await api.get('/api/oauth/state', { params: { aff } })
     if (res.data.success) {
       return res.data.data
     }
