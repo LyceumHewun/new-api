@@ -1,7 +1,11 @@
 import { useState, useEffect } from 'react'
 import { Loader2 } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { formatQuota } from '@/lib/format'
+import {
+  formatQuota,
+  parseQuotaFromDollars,
+  quotaUnitsToDollars,
+} from '@/lib/format'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -31,17 +35,31 @@ export function TransferDialog({
   transferring,
 }: TransferDialogProps) {
   const { t } = useTranslation()
-  const [amount, setAmount] = useState(QUOTA_PER_DOLLAR)
+  const [amount, setAmount] = useState('')
+
+  const minAmount = quotaUnitsToDollars(QUOTA_PER_DOLLAR)
+  const maxAmount = quotaUnitsToDollars(availableQuota)
+  const parsedAmount = Number(amount)
+  const quotaAmount = parseQuotaFromDollars(parsedAmount)
+  const canTransfer =
+    Number.isFinite(parsedAmount) &&
+    quotaAmount >= QUOTA_PER_DOLLAR &&
+    quotaAmount <= availableQuota
+
+  const formatInputAmount = (value: number) =>
+    Number.isFinite(value) ? String(Number(value.toFixed(4))) : ''
 
   useEffect(() => {
     if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setAmount(QUOTA_PER_DOLLAR)
+      setAmount(formatInputAmount(minAmount))
     }
-  }, [open])
+  }, [minAmount, open])
 
   const handleConfirm = async () => {
-    const success = await onConfirm(amount)
+    if (!canTransfer) return
+
+    const success = await onConfirm(quotaAmount)
     if (success) {
       onOpenChange(false)
     }
@@ -80,10 +98,10 @@ export function TransferDialog({
               id='transfer-amount'
               type='number'
               value={amount}
-              onChange={(e) => setAmount(Number(e.target.value))}
-              min={QUOTA_PER_DOLLAR}
-              max={availableQuota}
-              step={QUOTA_PER_DOLLAR}
+              onChange={(e) => setAmount(e.target.value)}
+              min={formatInputAmount(minAmount)}
+              max={formatInputAmount(maxAmount)}
+              step='0.01'
               className='font-mono text-lg'
             />
             <p className='text-muted-foreground text-xs'>
@@ -100,7 +118,10 @@ export function TransferDialog({
           >
             {t('Cancel')}
           </Button>
-          <Button onClick={handleConfirm} disabled={transferring}>
+          <Button
+            onClick={handleConfirm}
+            disabled={transferring || !canTransfer}
+          >
             {transferring && <Loader2 className='mr-2 h-4 w-4 animate-spin' />}
             {t('Transfer')}
           </Button>
