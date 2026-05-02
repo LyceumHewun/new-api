@@ -66,6 +66,13 @@ export function removeUserId(): void {
 export function getAffiliateCode(): string {
   if (typeof window === 'undefined') return ''
   try {
+    const code = new URLSearchParams(window.location.search).get(
+      STORAGE_KEYS.AFFILIATE
+    )
+    if (code) {
+      window.localStorage.setItem(STORAGE_KEYS.AFFILIATE, code)
+      return code
+    }
     return window.localStorage.getItem(STORAGE_KEYS.AFFILIATE) ?? ''
   } catch (error) {
     // eslint-disable-next-line no-console
