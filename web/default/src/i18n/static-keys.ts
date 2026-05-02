@@ -106,6 +106,7 @@ export const STATIC_I18N_KEYS = [
   'Failed to update redemption code status',
   'Name must be between {{min}} and {{max}} characters',
   'Count must be between {{min}} and {{max}}',
+  'Remaining uses must be -1, 0, or a positive integer',
   'Expired time cannot be earlier than current time',
   'Quota must be a positive number',
   'Successfully created {{count}} redemption codes',

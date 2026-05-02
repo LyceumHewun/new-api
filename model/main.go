@@ -248,6 +248,7 @@ func InitLogDB() (err error) {
 }
 
 func migrateDB() error {
+	redemptionRemainCountExists := DB.Migrator().HasColumn(&Redemption{}, "remain_count")
 	// Migrate price_amount column from float/double to decimal for existing tables
 	migrateSubscriptionPlanPriceAmount()
 	// Migrate model_limits column from varchar to text for existing tables
@@ -262,6 +263,7 @@ func migrateDB() error {
 		&PasskeyCredential{},
 		&Option{},
 		&Redemption{},
+		&RedemptionUsage{},
 		&Ability{},
 		&Log{},
 		&Midjourney{},
@@ -285,6 +287,12 @@ func migrateDB() error {
 	if err != nil {
 		return err
 	}
+	if err := backfillRedemptionRemainCount(redemptionRemainCountExists); err != nil {
+		return err
+	}
+	if err := backfillRedemptionUsageRecords(); err != nil {
+		return err
+	}
 	if common.UsingSQLite {
 		if err := ensureSubscriptionPlanTableSQLite(); err != nil {
 			return err
@@ -298,6 +306,7 @@ func migrateDB() error {
 }
 
 func migrateDBFast() error {
+	redemptionRemainCountExists := DB.Migrator().HasColumn(&Redemption{}, "remain_count")
 
 	var wg sync.WaitGroup
 
@@ -311,6 +320,7 @@ func migrateDBFast() error {
 		{&PasskeyCredential{}, "PasskeyCredential"},
 		{&Option{}, "Option"},
 		{&Redemption{}, "Redemption"},
+		{&RedemptionUsage{}, "RedemptionUsage"},
 		{&Ability{}, "Ability"},
 		{&Log{}, "Log"},
 		{&Midjourney{}, "Midjourney"},
@@ -363,8 +373,51 @@ func migrateDBFast() error {
 			return err
 		}
 	}
+	if err := backfillRedemptionRemainCount(redemptionRemainCountExists); err != nil {
+		return err
+	}
+	if err := backfillRedemptionUsageRecords(); err != nil {
+		return err
+	}
 	common.SysLog("database migrated")
 	return nil
+}
+
+func backfillRedemptionRemainCount(columnExisted bool) error {
+	if columnExisted {
+		return nil
+	}
+	return DB.Model(&Redemption{}).
+		Where("status != ?", common.RedemptionCodeStatusUsed).
+		Update("remain_count", 1).Error
+}
+
+func backfillRedemptionUsageRecords() error {
+	var redemptions []Redemption
+	if err := DB.
+		Table("redemptions").
+		Select("redemptions.id", "redemptions.used_user_id", "redemptions.redeemed_time", "redemptions.created_time").
+		Joins("LEFT JOIN redemption_usages ON redemption_usages.redemption_id = redemptions.id AND redemption_usages.user_id = redemptions.used_user_id").
+		Where("redemptions.used_user_id > 0 AND redemption_usages.id IS NULL").
+		Find(&redemptions).Error; err != nil {
+		return err
+	}
+	usages := make([]RedemptionUsage, 0, len(redemptions))
+	for _, redemption := range redemptions {
+		createdTime := redemption.RedeemedTime
+		if createdTime == 0 {
+			createdTime = redemption.CreatedTime
+		}
+		usages = append(usages, RedemptionUsage{
+			RedemptionId: redemption.Id,
+			UserId:       redemption.UsedUserId,
+			CreatedTime:  createdTime,
+		})
+	}
+	if len(usages) == 0 {
+		return nil
+	}
+	return DB.CreateInBatches(usages, 1000).Error
 }
 
 func migrateLOGDB() error {

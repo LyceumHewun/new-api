@@ -25,6 +25,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@/components/ui/sheet'
+import { Switch } from '@/components/ui/switch'
 import { DateTimePicker } from '@/components/datetime-picker'
 import { createRedemption, updateRedemption, getRedemption } from '../api'
 import { SUCCESS_MESSAGES } from '../constants'
@@ -197,6 +198,61 @@ export function RedemptionsMutateDrawer({
                         })}
                   </FormDescription>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='remain_count'
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{t('Remaining Uses')}</FormLabel>
+                  <FormControl>
+                    <Input
+                      {...field}
+                      type='number'
+                      step={1}
+                      placeholder={t('Remaining Uses')}
+                      onChange={(e) => {
+                        const value = e.target.value
+                        field.onChange(
+                          value === '' || value === '-'
+                            ? value
+                            : parseInt(value, 10)
+                        )
+                      }}
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    {t(
+                      'Number of times this code can still be redeemed (-1 for unlimited)'
+                    )}
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name='disable_invite_rebate'
+              render={({ field }) => (
+                <FormItem className='flex items-center justify-between gap-4 rounded-md border px-3 py-2'>
+                  <div className='space-y-0.5'>
+                    <FormLabel>{t('Disable invite rebate')}</FormLabel>
+                    <FormDescription>
+                      {t(
+                        'Do not trigger invite rebates when this code is redeemed'
+                      )}
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
                 </FormItem>
               )}
             />

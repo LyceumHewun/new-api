@@ -118,6 +118,24 @@ export const getRedemptionsColumns = ({
       },
     },
     {
+      title: t('剩余使用次数'),
+      dataIndex: 'remain_count',
+      render: (text) => {
+        return <div>{text === -1 ? t('无限') : text}</div>;
+      },
+    },
+    {
+      title: t('邀请返现'),
+      dataIndex: 'disable_invite_rebate',
+      render: (text) => {
+        return (
+          <Tag color={text ? 'grey' : 'green'} shape='circle'>
+            {text ? t('已禁用') : t('已启用')}
+          </Tag>
+        );
+      },
+    },
+    {
       title: t('创建时间'),
       dataIndex: 'created_time',
       render: (text) => {
@@ -203,7 +221,6 @@ export const getRedemptionsColumns = ({
                 setEditingRedemption(record);
                 setShowEdit(true);
               }}
-              disabled={record.status !== REDEMPTION_STATUS.UNUSED}
             >
               {t('编辑')}
             </Button>

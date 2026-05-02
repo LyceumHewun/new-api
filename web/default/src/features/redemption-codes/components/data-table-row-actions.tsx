@@ -50,7 +50,7 @@ export function DataTableRowActions<TData>({
     }
   }
 
-  const canEdit = isEnabled && !isExpired
+  const canEdit = true
   const canToggle = !isUsed && !isExpired
 
   return (
