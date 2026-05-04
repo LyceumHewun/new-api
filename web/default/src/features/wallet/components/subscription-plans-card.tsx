@@ -435,7 +435,7 @@ export function SubscriptionPlansCard({
 
         {/* Available plans grid */}
         {plans.length > 0 ? (
-          <div className='grid grid-cols-1 gap-3 2xl:grid-cols-2 2xl:gap-4'>
+          <div className='grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:gap-4'>
             {plans.map((p) => {
               const plan = p?.plan
               if (!plan) return null
