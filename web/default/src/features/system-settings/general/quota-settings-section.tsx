@@ -26,26 +26,32 @@ const quotaSchema = z.object({
   PreConsumedQuota: z.coerce.number().min(0),
   QuotaForInviter: z.coerce.number().min(0),
   QuotaForInvitee: z.coerce.number().min(0),
-  'invite_rebate_setting.count_limit': z.coerce.number().min(-1),
-  'invite_rebate_setting.chain_ratios': z.string().superRefine((value, ctx) => {
-    try {
-      const parsed = JSON.parse(value || '[]')
-      if (!Array.isArray(parsed)) {
+  invite_rebate_setting: z.object({
+    count_limit: z.coerce.number().min(-1),
+    chain_ratios: z.string().superRefine((value, ctx) => {
+      try {
+        const parsed = JSON.parse(value || '[]')
+        if (!Array.isArray(parsed)) {
+          ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: 'Must be a JSON array',
+          })
+        }
+      } catch {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Must be a JSON array',
+          message: 'Invalid JSON',
         })
       }
-    } catch {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        message: 'Invalid JSON',
-      })
-    }
+    }),
   }),
   TopUpLink: z.string().url().optional().or(z.literal('')),
-  'general_setting.docs_link': z.string().url().optional().or(z.literal('')),
-  'quota_setting.enable_free_model_pre_consume': z.boolean(),
+  general_setting: z.object({
+    docs_link: z.string().url().optional().or(z.literal('')),
+  }),
+  quota_setting: z.object({
+    enable_free_model_pre_consume: z.boolean(),
+  }),
 })
 
 type QuotaFormValues = z.infer<typeof quotaSchema>
@@ -215,16 +221,10 @@ export function QuotaSettingsSection({
               <FormItem>
                 <FormLabel>{t('Invite Rebate Chain Ratios')}</FormLabel>
                 <FormControl>
-                  <Textarea
-                    rows={4}
-                    placeholder='[0.3,0.2,0.1]'
-                    {...field}
-                  />
+                  <Textarea rows={4} placeholder='[0.3,0.2,0.1]' {...field} />
                 </FormControl>
                 <FormDescription>
-                  {t(
-                    'JSON array of rebate ratios from direct inviter upward'
-                  )}
+                  {t('JSON array of rebate ratios from direct inviter upward')}
                 </FormDescription>
                 <FormMessage />
               </FormItem>

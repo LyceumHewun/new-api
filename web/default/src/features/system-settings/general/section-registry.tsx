@@ -44,14 +44,18 @@ const GENERAL_SECTIONS = [
           PreConsumedQuota: settings.PreConsumedQuota,
           QuotaForInviter: settings.QuotaForInviter,
           QuotaForInvitee: settings.QuotaForInvitee,
-          'invite_rebate_setting.count_limit':
-            settings['invite_rebate_setting.count_limit'],
-          'invite_rebate_setting.chain_ratios':
-            settings['invite_rebate_setting.chain_ratios'],
+          invite_rebate_setting: {
+            count_limit: settings['invite_rebate_setting.count_limit'],
+            chain_ratios: settings['invite_rebate_setting.chain_ratios'],
+          },
           TopUpLink: settings.TopUpLink,
-          'general_setting.docs_link': settings['general_setting.docs_link'],
-          'quota_setting.enable_free_model_pre_consume':
-            settings['quota_setting.enable_free_model_pre_consume'],
+          general_setting: {
+            docs_link: settings['general_setting.docs_link'],
+          },
+          quota_setting: {
+            enable_free_model_pre_consume:
+              settings['quota_setting.enable_free_model_pre_consume'],
+          },
         }}
       />
     ),
