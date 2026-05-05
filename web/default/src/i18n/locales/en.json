@@ -3426,6 +3426,7 @@
     "Text to Video": "Text to Video",
     "The administrator account is already initialized. You can keep your existing credentials and continue to the next step.": "The administrator account is already initialized. You can keep your existing credentials and continue to the next step.",
     "The administrator configured an external link for this document.": "The administrator configured an external link for this document.",
+    "The administrator has enabled the email domain name whitelist, and your email address is not allowed due to special symbols or it's not in the whitelist.": "The administrator has enabled the email domain name whitelist, and your email address is not allowed due to special symbols or it's not in the whitelist.",
     "The administrator has not configured a privacy policy yet.": "The administrator has not configured a privacy policy yet.",
     "The administrator has not configured a user agreement yet.": "The administrator has not configured a user agreement yet.",
     "The administrator has not configured any about content yet. You can set it in the settings page, supporting HTML or URL.": "The administrator has not configured any about content yet. You can set it in the settings page, supporting HTML or URL.",

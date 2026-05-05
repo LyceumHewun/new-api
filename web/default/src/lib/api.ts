@@ -67,7 +67,7 @@ api.interceptors.response.use(
       if (!response.data.success) {
         // Show error toast for business failures
         const msg = response.data.message || 'Request failed'
-        toast.error(msg)
+        toast.error(i18next.t(msg))
       }
     }
     return response
@@ -89,7 +89,7 @@ api.interceptors.response.use(
         // Other errors: show error message from response or default
         const msg =
           error?.response?.data?.message || error?.message || 'Request error'
-        toast.error(msg)
+        toast.error(i18next.t(msg))
       }
     }
     return Promise.reject(error)
