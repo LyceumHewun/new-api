@@ -318,6 +318,30 @@ export function SubscriptionsMutateDrawer({
                     </FormItem>
                   )}
                 />
+
+                <FormField
+                  control={form.control}
+                  name='sales_agent_user_id'
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>{t('Sales Agent Exclusive')}</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          type='number'
+                          min={0}
+                          onChange={(e) =>
+                            field.onChange(parseInt(e.target.value, 10) || 0)
+                          }
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {t('0 means visible to all users')}
+                      </FormDescription>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className='grid grid-cols-1 gap-3 sm:grid-cols-2'>

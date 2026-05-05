@@ -18,6 +18,34 @@ type SubscriptionPlanDTO struct {
 	Plan model.SubscriptionPlan `json:"plan"`
 }
 
+func canUserViewSubscriptionPlan(userId int, plan *model.SubscriptionPlan) (bool, error) {
+	if plan == nil {
+		return false, nil
+	}
+	if plan.SalesAgentUserId <= 0 {
+		return true, nil
+	}
+	if userId <= 0 {
+		return false, nil
+	}
+	if plan.SalesAgentUserId == userId {
+		return true, nil
+	}
+	user, err := model.GetUserById(userId, false)
+	if err != nil {
+		return false, err
+	}
+	return user.InviterId == plan.SalesAgentUserId, nil
+}
+
+func validateSubscriptionPlanSalesAgent(plan *model.SubscriptionPlan) error {
+	if plan == nil || plan.SalesAgentUserId <= 0 {
+		return nil
+	}
+	_, err := model.GetUserById(plan.SalesAgentUserId, false)
+	return err
+}
+
 type BillingPreferenceRequest struct {
 	BillingPreference string `json:"billing_preference"`
 }
@@ -52,7 +80,17 @@ func subscriptionEpayMoney(plan *model.SubscriptionPlan) float64 {
 
 func GetSubscriptionPlans(c *gin.Context) {
 	var plans []model.SubscriptionPlan
-	if err := model.DB.Where("enabled = ?", true).Order("sort_order desc, id desc").Find(&plans).Error; err != nil {
+	userId := c.GetInt("id")
+	inviterId := 0
+	if userId > 0 {
+		user, err := model.GetUserById(userId, false)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		inviterId = user.InviterId
+	}
+	if err := model.DB.Where("enabled = ? AND (sales_agent_user_id = ? OR sales_agent_user_id = ? OR sales_agent_user_id = ?)", true, 0, userId, inviterId).Order("sort_order desc, id desc").Find(&plans).Error; err != nil {
 		common.ApiError(c, err)
 		return
 	}
@@ -164,6 +202,10 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "购买上限不能为负数")
 		return
 	}
+	if req.Plan.SalesAgentUserId < 0 {
+		common.ApiErrorMsg(c, "销售代理用户ID不能为负数")
+		return
+	}
 	if req.Plan.TotalAmount < 0 {
 		common.ApiErrorMsg(c, "总额度不能为负数")
 		return
@@ -178,6 +220,10 @@ func AdminCreateSubscriptionPlan(c *gin.Context) {
 	req.Plan.QuotaResetPeriod = model.NormalizeResetPeriod(req.Plan.QuotaResetPeriod)
 	if req.Plan.QuotaResetPeriod == model.SubscriptionResetCustom && req.Plan.QuotaResetCustomSeconds <= 0 {
 		common.ApiErrorMsg(c, "自定义重置周期需大于0秒")
+		return
+	}
+	if err := validateSubscriptionPlanSalesAgent(&req.Plan); err != nil {
+		common.ApiErrorMsg(c, "销售代理用户不存在")
 		return
 	}
 	err := model.DB.Create(&req.Plan).Error
@@ -224,6 +270,10 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "购买上限不能为负数")
 		return
 	}
+	if req.Plan.SalesAgentUserId < 0 {
+		common.ApiErrorMsg(c, "销售代理用户ID不能为负数")
+		return
+	}
 	if req.Plan.TotalAmount < 0 {
 		common.ApiErrorMsg(c, "总额度不能为负数")
 		return
@@ -240,6 +290,10 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 		common.ApiErrorMsg(c, "自定义重置周期需大于0秒")
 		return
 	}
+	if err := validateSubscriptionPlanSalesAgent(&req.Plan); err != nil {
+		common.ApiErrorMsg(c, "销售代理用户不存在")
+		return
+	}
 
 	err := model.DB.Transaction(func(tx *gorm.DB) error {
 		// update plan (allow zero values updates with map)
@@ -254,6 +308,7 @@ func AdminUpdateSubscriptionPlan(c *gin.Context) {
 			"enabled":                    req.Plan.Enabled,
 			"sort_order":                 req.Plan.SortOrder,
 			"recommended":                req.Plan.Recommended,
+			"sales_agent_user_id":        req.Plan.SalesAgentUserId,
 			"stripe_price_id":            req.Plan.StripePriceId,
 			"creem_product_id":           req.Plan.CreemProductId,
 			"max_purchase_per_user":      req.Plan.MaxPurchasePerUser,

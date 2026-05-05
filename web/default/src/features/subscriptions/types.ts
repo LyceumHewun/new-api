@@ -18,6 +18,7 @@ export const subscriptionPlanSchema = z.object({
   enabled: z.boolean(),
   sort_order: z.number(),
   recommended: z.boolean().optional(),
+  sales_agent_user_id: z.number().optional(),
   max_purchase_per_user: z.number(),
   total_amount: z.number(),
   upgrade_group: z.string().optional(),

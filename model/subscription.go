@@ -163,6 +163,9 @@ type SubscriptionPlan struct {
 	SortOrder   int  `json:"sort_order" gorm:"type:int;default:0"`
 	Recommended bool `json:"recommended" gorm:"default:false"`
 
+	// Sales agent exclusive plan (0 = visible to all)
+	SalesAgentUserId int `json:"sales_agent_user_id" gorm:"type:int;default:0;index"`
+
 	StripePriceId  string `json:"stripe_price_id" gorm:"type:varchar(128);default:''"`
 	CreemProductId string `json:"creem_product_id" gorm:"type:varchar(128);default:''"`
 

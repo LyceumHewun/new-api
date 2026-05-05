@@ -113,7 +113,13 @@ export function useSubscriptionsColumns(): ColumnDef<PlanRecord>[] {
           row.original.plan.enabled ? (
             <div className='flex flex-wrap gap-1'>
               <StatusBadge
-                label={t('Enable')}
+                label={
+                  row.original.plan.sales_agent_user_id
+                    ? t('Agent user #{{id}} exclusive', {
+                        id: row.original.plan.sales_agent_user_id,
+                      })
+                    : t('Enable')
+                }
                 variant='success'
                 copyable={false}
               />

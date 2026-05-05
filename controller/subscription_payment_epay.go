@@ -38,6 +38,16 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		common.ApiErrorMsg(c, "套餐未启用")
 		return
 	}
+	userId := c.GetInt("id")
+	visible, err := canUserViewSubscriptionPlan(userId, plan)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if !visible {
+		common.ApiErrorMsg(c, "套餐不可用")
+		return
+	}
 	if plan.PriceAmount < 0.01 {
 		common.ApiErrorMsg(c, "套餐金额过低")
 		return
@@ -52,7 +62,6 @@ func SubscriptionRequestEpay(c *gin.Context) {
 		return
 	}
 
-	userId := c.GetInt("id")
 	if plan.MaxPurchasePerUser > 0 {
 		count, err := model.CountUserSubscriptionsByPlan(userId, plan.Id)
 		if err != nil {

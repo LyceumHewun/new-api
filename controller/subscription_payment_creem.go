@@ -45,15 +45,6 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 		common.ApiErrorMsg(c, "套餐未启用")
 		return
 	}
-	if plan.CreemProductId == "" {
-		common.ApiErrorMsg(c, "该套餐未配置 CreemProductId")
-		return
-	}
-	if setting.CreemWebhookSecret == "" && !setting.CreemTestMode {
-		common.ApiErrorMsg(c, "Creem Webhook 未配置")
-		return
-	}
-
 	userId := c.GetInt("id")
 	user, err := model.GetUserById(userId, false)
 	if err != nil {
@@ -62,6 +53,23 @@ func SubscriptionRequestCreemPay(c *gin.Context) {
 	}
 	if user == nil {
 		common.ApiErrorMsg(c, "用户不存在")
+		return
+	}
+	visible, err := canUserViewSubscriptionPlan(userId, plan)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if !visible {
+		common.ApiErrorMsg(c, "套餐不可用")
+		return
+	}
+	if plan.CreemProductId == "" {
+		common.ApiErrorMsg(c, "该套餐未配置 CreemProductId")
+		return
+	}
+	if setting.CreemWebhookSecret == "" && !setting.CreemTestMode {
+		common.ApiErrorMsg(c, "Creem Webhook 未配置")
 		return
 	}
 

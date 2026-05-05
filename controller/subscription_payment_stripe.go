@@ -37,6 +37,25 @@ func SubscriptionRequestStripePay(c *gin.Context) {
 		common.ApiErrorMsg(c, "套餐未启用")
 		return
 	}
+	userId := c.GetInt("id")
+	user, err := model.GetUserById(userId, false)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if user == nil {
+		common.ApiErrorMsg(c, "用户不存在")
+		return
+	}
+	visible, err := canUserViewSubscriptionPlan(userId, plan)
+	if err != nil {
+		common.ApiError(c, err)
+		return
+	}
+	if !visible {
+		common.ApiErrorMsg(c, "套餐不可用")
+		return
+	}
 	if plan.StripePriceId == "" {
 		common.ApiErrorMsg(c, "该套餐未配置 StripePriceId")
 		return
@@ -47,17 +66,6 @@ func SubscriptionRequestStripePay(c *gin.Context) {
 	}
 	if setting.StripeWebhookSecret == "" {
 		common.ApiErrorMsg(c, "Stripe Webhook 未配置")
-		return
-	}
-
-	userId := c.GetInt("id")
-	user, err := model.GetUserById(userId, false)
-	if err != nil {
-		common.ApiError(c, err)
-		return
-	}
-	if user == nil {
-		common.ApiErrorMsg(c, "用户不存在")
 		return
 	}
 
