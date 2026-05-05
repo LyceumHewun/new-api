@@ -15,6 +15,14 @@ func setInviteRebateSettingForTest(countLimit int, ratios []float64) {
 	setting := operation_setting.GetInviteRebateSetting()
 	setting.CountLimit = countLimit
 	setting.ChainRatios = ratios
+	setting.GroupSettings = map[string]operation_setting.InviteRebateGroupSetting{}
+	operation_setting.NormalizeInviteRebateSetting(setting)
+}
+
+func setInviteRebateGroupSettingForTest(groupSettings map[string]operation_setting.InviteRebateGroupSetting) {
+	setting := operation_setting.GetInviteRebateSetting()
+	setting.GroupSettings = groupSettings
+	operation_setting.NormalizeInviteRebateSetting(setting)
 }
 
 func insertInviteRebateUser(t *testing.T, id int, inviterID int) {
@@ -23,6 +31,19 @@ func insertInviteRebateUser(t *testing.T, id int, inviterID int) {
 		Id:        id,
 		Username:  fmt.Sprintf("invite_rebate_user_%d", id),
 		Status:    common.UserStatusEnabled,
+		Group:     "default",
+		AffCode:   fmt.Sprintf("ir%d", id),
+		InviterId: inviterID,
+	}).Error)
+}
+
+func insertInviteRebateUserWithGroup(t *testing.T, id int, inviterID int, group string) {
+	t.Helper()
+	require.NoError(t, DB.Create(&User{
+		Id:        id,
+		Username:  fmt.Sprintf("invite_rebate_user_%d", id),
+		Status:    common.UserStatusEnabled,
+		Group:     group,
 		AffCode:   fmt.Sprintf("ir%d", id),
 		InviterId: inviterID,
 	}).Error)
@@ -151,4 +172,87 @@ func TestApplyInviteRechargeRebateTx_MissingInviterStopsChain(t *testing.T) {
 	var count int64
 	require.NoError(t, DB.Model(&InviteRebateRecord{}).Count(&count).Error)
 	assert.EqualValues(t, 0, count)
+}
+
+func TestApplyInviteRechargeRebateTx_GroupSettingUsesBeneficiaryGroupAndLevel(t *testing.T) {
+	truncateTables(t)
+	setInviteRebateSettingForTest(-1, []float64{0.25, 0.1})
+	setInviteRebateGroupSettingForTest(map[string]operation_setting.InviteRebateGroupSetting{
+		"vip": {
+			CountLimit:  -1,
+			ChainRatios: []float64{0.5, 0.2},
+		},
+	})
+
+	insertInviteRebateUser(t, 100, 101)
+	insertInviteRebateUser(t, 101, 102)
+	insertInviteRebateUserWithGroup(t, 102, 0, "vip")
+
+	var records []InviteRebateRecord
+	require.NoError(t, DB.Transaction(func(tx *gorm.DB) error {
+		var err error
+		records, err = ApplyInviteRechargeRebateTx(tx, 100, PaymentProviderEpay, "order-group", "order-group", 1000)
+		return err
+	}))
+	require.Len(t, records, 2)
+
+	affQuota, _ := getInviteQuotaForTest(t, 101)
+	assert.Equal(t, 250, affQuota)
+	affQuota, _ = getInviteQuotaForTest(t, 102)
+	assert.Equal(t, 200, affQuota)
+}
+
+func TestApplyInviteRechargeRebateTx_GroupSettingMissingLevelDoesNotFallback(t *testing.T) {
+	truncateTables(t)
+	setInviteRebateSettingForTest(-1, []float64{0.25, 0.1})
+	setInviteRebateGroupSettingForTest(map[string]operation_setting.InviteRebateGroupSetting{
+		"vip": {
+			CountLimit:  -1,
+			ChainRatios: []float64{0.5},
+		},
+	})
+
+	insertInviteRebateUser(t, 110, 111)
+	insertInviteRebateUser(t, 111, 112)
+	insertInviteRebateUserWithGroup(t, 112, 0, "vip")
+
+	var records []InviteRebateRecord
+	require.NoError(t, DB.Transaction(func(tx *gorm.DB) error {
+		var err error
+		records, err = ApplyInviteRechargeRebateTx(tx, 110, PaymentProviderEpay, "order-missing-level", "order-missing-level", 1000)
+		return err
+	}))
+	require.Len(t, records, 1)
+
+	affQuota, _ := getInviteQuotaForTest(t, 111)
+	assert.Equal(t, 250, affQuota)
+	affQuota, _ = getInviteQuotaForTest(t, 112)
+	assert.Equal(t, 0, affQuota)
+}
+
+func TestApplyInviteRechargeRebateTx_GroupCountLimitSkipsOnlyThatBeneficiary(t *testing.T) {
+	truncateTables(t)
+	setInviteRebateSettingForTest(-1, []float64{0.25, 0.1})
+	setInviteRebateGroupSettingForTest(map[string]operation_setting.InviteRebateGroupSetting{
+		"limited": {
+			CountLimit:  1,
+			ChainRatios: []float64{0.5, 0.2},
+		},
+	})
+
+	insertInviteRebateUser(t, 120, 121)
+	insertInviteRebateUserWithGroup(t, 121, 122, "limited")
+	insertInviteRebateUser(t, 122, 0)
+
+	for _, sourceID := range []string{"order-limit-1", "order-limit-2"} {
+		require.NoError(t, DB.Transaction(func(tx *gorm.DB) error {
+			_, err := ApplyInviteRechargeRebateTx(tx, 120, PaymentProviderEpay, sourceID, sourceID, 1000)
+			return err
+		}))
+	}
+
+	affQuota, _ := getInviteQuotaForTest(t, 121)
+	assert.Equal(t, 500, affQuota)
+	affQuota, _ = getInviteQuotaForTest(t, 122)
+	assert.Equal(t, 200, affQuota)
 }

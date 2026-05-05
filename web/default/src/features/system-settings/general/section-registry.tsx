@@ -47,6 +47,7 @@ const GENERAL_SECTIONS = [
           invite_rebate_setting: {
             count_limit: settings['invite_rebate_setting.count_limit'],
             chain_ratios: settings['invite_rebate_setting.chain_ratios'],
+            group_settings: settings['invite_rebate_setting.group_settings'],
           },
           TopUpLink: settings.TopUpLink,
           general_setting: {

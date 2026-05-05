@@ -133,6 +133,7 @@ func UpdateOption(c *gin.Context) {
 	default:
 		option.Value = fmt.Sprintf("%v", option.Value)
 	}
+	derivedInviteRebateMaxDepth := -1
 	switch option.Key {
 	case "GitHubOAuthEnabled":
 		if option.Value == "true" && common.GitHubClientId == "" {
@@ -270,6 +271,10 @@ func UpdateOption(c *gin.Context) {
 			})
 			return
 		}
+		candidate := *operation_setting.GetInviteRebateSetting()
+		candidate.CountLimit = countLimit
+		operation_setting.NormalizeInviteRebateSetting(&candidate)
+		derivedInviteRebateMaxDepth = candidate.MaxChainDepth
 	case "invite_rebate_setting.chain_ratios":
 		var ratios []float64
 		err = common.UnmarshalJsonStr(option.Value.(string), &ratios)
@@ -280,15 +285,59 @@ func UpdateOption(c *gin.Context) {
 			})
 			return
 		}
-		for _, ratio := range ratios {
-			if ratio < 0 {
-				c.JSON(http.StatusOK, gin.H{
-					"success": false,
-					"message": "返现比例不能为负数",
-				})
-				return
-			}
+		if err := operation_setting.ValidateInviteRebateRatios(ratios); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
 		}
+		jsonBytes, err := common.Marshal(ratios)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		option.Value = string(jsonBytes)
+		candidate := *operation_setting.GetInviteRebateSetting()
+		candidate.ChainRatios = ratios
+		operation_setting.NormalizeInviteRebateSetting(&candidate)
+		derivedInviteRebateMaxDepth = candidate.MaxChainDepth
+	case "invite_rebate_setting.group_settings":
+		var groupSettings map[string]operation_setting.InviteRebateGroupSetting
+		err = common.UnmarshalJsonStr(option.Value.(string), &groupSettings)
+		if err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": "基于分组的邀请返利链比例必须为 JSON 对象",
+			})
+			return
+		}
+		if groupSettings == nil {
+			groupSettings = map[string]operation_setting.InviteRebateGroupSetting{}
+		}
+		if err := operation_setting.ValidateInviteRebateGroupSettings(groupSettings); err != nil {
+			c.JSON(http.StatusOK, gin.H{
+				"success": false,
+				"message": err.Error(),
+			})
+			return
+		}
+		jsonBytes, err := common.Marshal(groupSettings)
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
+		option.Value = string(jsonBytes)
+		candidate := *operation_setting.GetInviteRebateSetting()
+		candidate.GroupSettings = groupSettings
+		operation_setting.NormalizeInviteRebateSetting(&candidate)
+		derivedInviteRebateMaxDepth = candidate.MaxChainDepth
+	case "invite_rebate_setting.max_chain_depth":
+		c.JSON(http.StatusOK, gin.H{
+			"success": false,
+			"message": "最大返现链由系统自动计算，不能手动设置",
+		})
+		return
 	case "AutomaticDisableStatusCodes":
 		_, err = operation_setting.ParseHTTPStatusCodeRanges(option.Value.(string))
 		if err != nil {
@@ -348,6 +397,13 @@ func UpdateOption(c *gin.Context) {
 	if err != nil {
 		common.ApiError(c, err)
 		return
+	}
+	if derivedInviteRebateMaxDepth >= 0 {
+		err = model.UpdateOption("invite_rebate_setting.max_chain_depth", strconv.Itoa(derivedInviteRebateMaxDepth))
+		if err != nil {
+			common.ApiError(c, err)
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{
 		"success": true,

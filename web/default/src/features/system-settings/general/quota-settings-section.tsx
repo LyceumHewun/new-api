@@ -1,6 +1,8 @@
+import { useState } from 'react'
 import * as z from 'zod'
 import type { Resolver } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
+import { Code2, Palette } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
 import { Button } from '@/components/ui/button'
 import {
@@ -20,6 +22,96 @@ import { FormNavigationGuard } from '../components/form-navigation-guard'
 import { SettingsSection } from '../components/settings-section'
 import { useSettingsForm } from '../hooks/use-settings-form'
 import { useUpdateOption } from '../hooks/use-update-option'
+import { InviteRebateGroupVisualEditor } from './invite-rebate-group-visual-editor'
+
+const validateRatioArray = (value: string, ctx: z.RefinementCtx) => {
+  try {
+    const parsed = JSON.parse(value || '[]')
+    if (!Array.isArray(parsed)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Must be a JSON array',
+      })
+      return
+    }
+    if (parsed.some((ratio) => typeof ratio !== 'number' || ratio < 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Ratios must be non-negative numbers',
+      })
+    }
+  } catch {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Invalid JSON',
+    })
+  }
+}
+
+const validateInviteRebateGroupSettings = (
+  value: string,
+  ctx: z.RefinementCtx
+) => {
+  try {
+    const parsed = JSON.parse(value || '{}')
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Must be a JSON object',
+      })
+      return
+    }
+    for (const [groupName, groupSetting] of Object.entries(parsed)) {
+      if (!groupName) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Group name is required',
+        })
+        return
+      }
+      if (
+        !groupSetting ||
+        typeof groupSetting !== 'object' ||
+        Array.isArray(groupSetting)
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Each group setting must be an object',
+        })
+        return
+      }
+      const record = groupSetting as Record<string, unknown>
+      if (
+        typeof record.count_limit !== 'number' ||
+        record.count_limit < -1 ||
+        record.count_limit > 2147483647
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'count_limit must be ≥ -1',
+        })
+        return
+      }
+      if (
+        !Array.isArray(record.chain_ratios) ||
+        record.chain_ratios.some(
+          (ratio) => typeof ratio !== 'number' || ratio < 0
+        )
+      ) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'chain_ratios must be a JSON array of non-negative numbers',
+        })
+        return
+      }
+    }
+  } catch {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Invalid JSON',
+    })
+  }
+}
 
 const quotaSchema = z.object({
   QuotaForNewUser: z.coerce.number().min(0),
@@ -28,22 +120,8 @@ const quotaSchema = z.object({
   QuotaForInvitee: z.coerce.number().min(0),
   invite_rebate_setting: z.object({
     count_limit: z.coerce.number().min(-1),
-    chain_ratios: z.string().superRefine((value, ctx) => {
-      try {
-        const parsed = JSON.parse(value || '[]')
-        if (!Array.isArray(parsed)) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            message: 'Must be a JSON array',
-          })
-        }
-      } catch {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Invalid JSON',
-        })
-      }
-    }),
+    chain_ratios: z.string().superRefine(validateRatioArray),
+    group_settings: z.string().superRefine(validateInviteRebateGroupSettings),
   }),
   TopUpLink: z.string().url().optional().or(z.literal('')),
   general_setting: z.object({
@@ -65,6 +143,7 @@ export function QuotaSettingsSection({
 }: QuotaSettingsSectionProps) {
   const { t } = useTranslation()
   const updateOption = useUpdateOption()
+  const [useGroupVisualEditor, setUseGroupVisualEditor] = useState(true)
 
   const { form, handleSubmit, isDirty, isSubmitting } =
     useSettingsForm<QuotaFormValues>({
@@ -226,6 +305,82 @@ export function QuotaSettingsSection({
                 <FormDescription>
                   {t('JSON array of rebate ratios from direct inviter upward')}
                 </FormDescription>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name='invite_rebate_setting.group_settings'
+            render={({ field }) => (
+              <FormItem>
+                <div className='flex items-center justify-between'>
+                  <FormLabel>
+                    {t('Group-based invite rebate chain ratios')}
+                  </FormLabel>
+                  <Button
+                    type='button'
+                    variant='outline'
+                    size='sm'
+                    onClick={() =>
+                      setUseGroupVisualEditor(!useGroupVisualEditor)
+                    }
+                  >
+                    {useGroupVisualEditor ? (
+                      <>
+                        <Code2 className='mr-2 h-4 w-4' />
+                        {t('JSON Mode')}
+                      </>
+                    ) : (
+                      <>
+                        <Palette className='mr-2 h-4 w-4' />
+                        {t('Visual Mode')}
+                      </>
+                    )}
+                  </Button>
+                </div>
+                <FormControl>
+                  {useGroupVisualEditor ? (
+                    <InviteRebateGroupVisualEditor
+                      value={field.value || ''}
+                      onChange={field.onChange}
+                    />
+                  ) : (
+                    <Textarea
+                      rows={8}
+                      placeholder={`{\n  "vip": {\n    "count_limit": -1,\n    "chain_ratios": [0.3, 0.15]\n  }\n}`}
+                      className='font-mono text-sm'
+                      {...field}
+                    />
+                  )}
+                </FormControl>
+                {!useGroupVisualEditor && (
+                  <FormDescription>
+                    <div className='space-y-1 text-xs'>
+                      <p className='font-semibold'>{t('Format:')}</p>
+                      <ul className='list-inside list-disc space-y-0.5 pl-2'>
+                        <li>
+                          {t('JSON object:')}{' '}
+                          {`{"groupName": {"count_limit": -1, "chain_ratios": [0.3, 0.15]}}`}
+                        </li>
+                        <li>
+                          {t('Rules apply by beneficiary inviter group.')}
+                        </li>
+                        <li>
+                          {t(
+                            'Missing group falls back to global invite rebate settings.'
+                          )}
+                        </li>
+                        <li>
+                          {t(
+                            'Configured group without a ratio for the current level gives no rebate for that level.'
+                          )}
+                        </li>
+                      </ul>
+                    </div>
+                  </FormDescription>
+                )}
                 <FormMessage />
               </FormItem>
             )}

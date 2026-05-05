@@ -44,6 +44,7 @@ export type GeneralSettings = {
   QuotaForInvitee: number
   'invite_rebate_setting.count_limit': number
   'invite_rebate_setting.chain_ratios': string
+  'invite_rebate_setting.group_settings': string
   TopUpLink: string
   'general_setting.docs_link': string
   'quota_setting.enable_free_model_pre_consume': boolean

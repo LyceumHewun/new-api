@@ -40,8 +40,18 @@ export function AffiliateRewardsCard({
   }
 
   const hasRewards = (user?.aff_quota ?? 0) > 0
-  const inviteChainRatios = Array.isArray(inviteRebateSetting?.chain_ratios)
-    ? inviteRebateSetting.chain_ratios
+  const groupSetting = user?.group
+    ? inviteRebateSetting?.group_settings?.[user.group]
+    : undefined
+  const effectiveInviteRebateSetting = groupSetting ?? inviteRebateSetting
+  const isGroupSpecific = !!groupSetting
+  const inviteRebateCountLimit = Number(
+    effectiveInviteRebateSetting?.count_limit ?? 0
+  )
+  const inviteChainRatios = Array.isArray(
+    effectiveInviteRebateSetting?.chain_ratios
+  )
+    ? effectiveInviteRebateSetting.chain_ratios
         .map((ratio) => Number(ratio))
         .filter((ratio) => Number.isFinite(ratio) && ratio >= 0)
     : []
@@ -59,6 +69,26 @@ export function AffiliateRewardsCard({
       })
     )
     .join(', ')
+  const inviteRebateDisabled =
+    inviteRebateCountLimit === 0 || inviteChainRatios.length === 0
+  const inviteRebateDescription = inviteRebateDisabled
+    ? t(
+        isGroupSpecific
+          ? 'Invite rebates do not apply to your group.'
+          : 'Invite rebates do not apply currently.'
+      )
+    : inviteChainText
+      ? t(
+          isGroupSpecific
+            ? 'Your group invite rebate chain: {{chain}}'
+            : 'Invite rebate chain: {{chain}}',
+          {
+            chain: inviteChainText,
+          }
+        )
+      : t(
+          'Earn rewards when your referrals add funds. Transfer accumulated rewards to your balance anytime.'
+        )
 
   return (
     <Card className='bg-muted/20 py-0'>
@@ -72,13 +102,7 @@ export function AffiliateRewardsCard({
               {t('Referral Program')}
             </h3>
             <p className='text-muted-foreground line-clamp-1 text-xs'>
-              {inviteChainText
-                ? t('Invite rebate chain: {{chain}}', {
-                    chain: inviteChainText,
-                  })
-                : t(
-                    'Earn rewards when your referrals add funds. Transfer accumulated rewards to your balance anytime.'
-                  )}
+              {inviteRebateDescription}
             </p>
           </div>
         </div>
@@ -109,7 +133,7 @@ export function AffiliateRewardsCard({
           <CopyButton
             value={affiliateLink}
             variant='outline'
-            className='size-9 shrink-0 bg-background'
+            className='bg-background size-9 shrink-0'
             iconClassName='size-4'
             tooltip={t('Copy referral link')}
             aria-label={t('Copy referral link')}

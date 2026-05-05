@@ -34,6 +34,27 @@ function parseJsonArray(data: unknown): unknown[] {
   return []
 }
 
+function parseJsonObject(data: unknown): Record<string, unknown> {
+  if (!data) {
+    return {}
+  }
+
+  if (typeof data === 'string') {
+    try {
+      const parsed = JSON.parse(data)
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed)
+        ? (parsed as Record<string, unknown>)
+        : {}
+    } catch {
+      return {}
+    }
+  }
+
+  return typeof data === 'object' && !Array.isArray(data)
+    ? (data as Record<string, unknown>)
+    : {}
+}
+
 function parsePaymentMethods(
   data: unknown,
   stripeMinTopup: number
@@ -151,11 +172,29 @@ function parseInviteRebateSetting(
   }
 
   const record = data as Record<string, unknown>
+  const groupSettings = Object.entries(
+    parseJsonObject(record.group_settings)
+  ).reduce<Record<string, { count_limit?: number; chain_ratios?: number[] }>>(
+    (result, [groupName, groupSetting]) => {
+      const groupRecord = parseJsonObject(groupSetting)
+      result[groupName] = {
+        count_limit: Number(groupRecord.count_limit ?? 0),
+        chain_ratios: parseJsonArray(groupRecord.chain_ratios)
+          .map((ratio) => Number(ratio))
+          .filter((ratio) => Number.isFinite(ratio) && ratio >= 0),
+      }
+      return result
+    },
+    {}
+  )
+
   return {
     count_limit: Number(record.count_limit ?? 0),
     chain_ratios: parseJsonArray(record.chain_ratios)
       .map((ratio) => Number(ratio))
       .filter((ratio) => Number.isFinite(ratio) && ratio >= 0),
+    group_settings: groupSettings,
+    max_chain_depth: Number(record.max_chain_depth ?? 0),
   }
 }
 

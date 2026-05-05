@@ -131,6 +131,14 @@ export interface TopupInfo {
   invite_rebate_setting?: {
     count_limit?: number
     chain_ratios?: number[]
+    group_settings?: Record<
+      string,
+      {
+        count_limit?: number
+        chain_ratios?: number[]
+      }
+    >
+    max_chain_depth?: number
   }
 }
 

@@ -25,6 +25,7 @@ const defaultGeneralSettings: GeneralSettings = {
   QuotaForInvitee: 0,
   'invite_rebate_setting.count_limit': 0,
   'invite_rebate_setting.chain_ratios': '[]',
+  'invite_rebate_setting.group_settings': '{}',
   TopUpLink: '',
   'general_setting.docs_link': '',
   'quota_setting.enable_free_model_pre_consume': true,

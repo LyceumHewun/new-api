@@ -31,14 +31,14 @@ type InviteRebateRecord struct {
 	CreatedAt         int64   `json:"created_at" gorm:"bigint;index"`
 }
 
-func countInviteRebateSourcesTx(tx *gorm.DB, payerID int) (int64, error) {
+func countInviteRebateSourcesTx(tx *gorm.DB, payerID int, beneficiaryID int) (int64, error) {
 	var sources []struct {
 		SourceType string
 		SourceId   string
 	}
 	err := tx.Model(&InviteRebateRecord{}).
 		Select("source_type", "source_id").
-		Where("payer_user_id = ?", payerID).
+		Where("payer_user_id = ? AND beneficiary_user_id = ?", payerID, beneficiaryID).
 		Group("source_type, source_id").
 		Find(&sources).Error
 	if err != nil {
@@ -49,39 +49,30 @@ func countInviteRebateSourcesTx(tx *gorm.DB, payerID int) (int64, error) {
 
 func ApplyInviteRechargeRebateTx(tx *gorm.DB, payerID int, sourceType, sourceID, sourceTradeNo string, baseQuota int) ([]InviteRebateRecord, error) {
 	setting := operation_setting.GetInviteRebateSetting()
-	if payerID <= 0 || baseQuota <= 0 || setting.CountLimit == 0 || len(setting.ChainRatios) == 0 {
+	maxChainDepth := operation_setting.EffectiveInviteRebateMaxChainDepth(setting)
+	if payerID <= 0 || baseQuota <= 0 || maxChainDepth == 0 {
 		return nil, nil
 	}
 
 	var payer User
 	payerQuery := tx.Select("id", "inviter_id").Where("id = ?", payerID)
-	if setting.CountLimit > 0 {
+	if operation_setting.HasPositiveInviteRebateCountLimit(setting) {
 		payerQuery = payerQuery.Set("gorm:query_option", "FOR UPDATE")
 	}
 	if err := payerQuery.First(&payer).Error; err != nil {
 		return nil, err
 	}
 
-	if setting.CountLimit > 0 {
-		usedCount, err := countInviteRebateSourcesTx(tx, payerID)
-		if err != nil {
-			return nil, err
-		}
-		if usedCount >= int64(setting.CountLimit) {
-			return nil, nil
-		}
-	}
-
 	now := common.GetTimestamp()
 	inviterID := payer.InviterId
-	records := make([]InviteRebateRecord, 0, len(setting.ChainRatios))
-	for index, ratio := range setting.ChainRatios {
+	records := make([]InviteRebateRecord, 0, maxChainDepth)
+	for index := 0; index < maxChainDepth; index++ {
 		if inviterID <= 0 {
 			break
 		}
 
 		var inviter User
-		if err := tx.Select("id", "inviter_id").Where("id = ?", inviterID).First(&inviter).Error; err != nil {
+		if err := tx.Select("id", "inviter_id", "group").Where("id = ?", inviterID).First(&inviter).Error; err != nil {
 			if errors.Is(err, gorm.ErrRecordNotFound) {
 				break
 			}
@@ -89,6 +80,21 @@ func ApplyInviteRechargeRebateTx(tx *gorm.DB, payerID int, sourceType, sourceID,
 		}
 
 		level := index + 1
+		countLimit, ratio, enabled := operation_setting.SelectInviteRebateRule(setting, inviter.Group, level)
+		if !enabled {
+			inviterID = inviter.InviterId
+			continue
+		}
+		if countLimit > 0 {
+			usedCount, err := countInviteRebateSourcesTx(tx, payerID, inviter.Id)
+			if err != nil {
+				return nil, err
+			}
+			if usedCount >= int64(countLimit) {
+				inviterID = inviter.InviterId
+				continue
+			}
+		}
 		rebateQuota := int(decimal.NewFromInt(int64(baseQuota)).Mul(decimal.NewFromFloat(ratio)).IntPart())
 		if rebateQuota > 0 {
 			var existing int64
