@@ -7,4 +7,13 @@ Makefile
 docs
 .eslintcache
 .gocache
-/web/node_modules
+.serena
+.agents
+.uv-cache
+bin
+data
+logs
+**/node_modules
+/web/dist
+/web/default/dist
+/web/classic/dist
