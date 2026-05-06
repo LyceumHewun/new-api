@@ -52,7 +52,8 @@ export function formatEpayCurrency(amount: number | string): string {
   if (!Number.isFinite(numeric)) return '-'
 
   const sign = numeric < 0 ? '-' : ''
-  return `${sign}¥${Math.abs(numeric).toFixed(2)}`
+  const formattedAmount = Math.abs(numeric).toFixed(2).replace(/\.?0+$/, '')
+  return `${sign}¥${formattedAmount}`
 }
 
 export function isEpayPaymentType(paymentType?: string): boolean {
