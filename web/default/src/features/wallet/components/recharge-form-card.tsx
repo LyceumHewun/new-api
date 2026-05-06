@@ -21,7 +21,8 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip'
 import {
-  formatCurrency,
+  formatPaymentCurrency,
+  isEpayPaymentType,
   getDiscountLabel,
   getPaymentIcon,
   getMinTopupAmount,
@@ -55,6 +56,7 @@ interface RechargeFormCardProps {
   loading?: boolean
   priceRatio?: number
   usdExchangeRate?: number
+  currentPaymentType?: string
   onOpenBilling?: () => void
   creemProducts?: CreemProduct[]
   enableCreemTopup?: boolean
@@ -85,6 +87,7 @@ export function RechargeFormCard({
   loading,
   priceRatio = 1,
   usdExchangeRate = 1,
+  currentPaymentType,
   onOpenBilling,
   creemProducts,
   enableCreemTopup,
@@ -218,6 +221,8 @@ export function RechargeFormCard({
                           discount,
                           usdExchangeRate
                         )
+                        const showPaymentEstimate =
+                          isEpayPaymentType(currentPaymentType)
                         return (
                           <Button
                             key={index}
@@ -240,15 +245,25 @@ export function RechargeFormCard({
                                 </div>
                               )}
                             </div>
-                            <div className='text-muted-foreground mt-1.5 w-full text-xs sm:mt-2'>
-                              Pay {formatCurrency(actualPrice)}
-                              {hasDiscount && savedAmount > 0 && (
-                                <span className='text-green-600'>
-                                  {' '}
-                                  • Save {formatCurrency(savedAmount)}
-                                </span>
-                              )}
-                            </div>
+                            {showPaymentEstimate && (
+                              <div className='text-muted-foreground mt-1.5 w-full text-xs sm:mt-2'>
+                                Pay{' '}
+                                {formatPaymentCurrency(
+                                  actualPrice,
+                                  currentPaymentType
+                                )}
+                                {hasDiscount && savedAmount > 0 && (
+                                  <span className='text-green-600'>
+                                    {' '}
+                                    • Save{' '}
+                                    {formatPaymentCurrency(
+                                      savedAmount,
+                                      currentPaymentType
+                                    )}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </Button>
                         )
                       })}
@@ -281,7 +296,10 @@ export function RechargeFormCard({
                         <Skeleton className='h-5 w-16' />
                       ) : (
                         <span className='text-sm font-semibold'>
-                          {formatCurrency(paymentAmount)}
+                          {formatPaymentCurrency(
+                            paymentAmount,
+                            currentPaymentType
+                          )}
                         </span>
                       )}
                     </div>

@@ -1,5 +1,5 @@
 import { formatLocalCurrencyAmount } from '@/lib/currency'
-import { DEFAULT_DISCOUNT_RATE } from '../constants'
+import { DEFAULT_DISCOUNT_RATE, PAYMENT_TYPES } from '../constants'
 
 // ============================================================================
 // Wallet-specific Formatting Functions
@@ -41,6 +41,43 @@ export function formatCurrency(amount: number | string): string {
     digitsSmall: 2,
     abbreviate: false,
   })
+}
+
+/**
+ * Format Epay payment amounts. Epay historically charges in CNY.
+ */
+export function formatEpayCurrency(amount: number | string): string {
+  const numeric =
+    typeof amount === 'number' ? amount : Number.parseFloat(String(amount))
+  if (!Number.isFinite(numeric)) return '-'
+
+  const sign = numeric < 0 ? '-' : ''
+  return `${sign}¥${Math.abs(numeric).toFixed(2)}`
+}
+
+export function isEpayPaymentType(paymentType?: string): boolean {
+  switch (paymentType) {
+    case PAYMENT_TYPES.STRIPE:
+    case PAYMENT_TYPES.CREEM:
+    case PAYMENT_TYPES.WAFFO:
+    case PAYMENT_TYPES.WAFFO_PANCAKE:
+      return false
+    default:
+      return true
+  }
+}
+
+/**
+ * Format payment amounts by gateway. Epay methods are CNY; other gateways keep
+ * the existing system currency display.
+ */
+export function formatPaymentCurrency(
+  amount: number | string,
+  paymentType?: string
+): string {
+  return isEpayPaymentType(paymentType)
+    ? formatEpayCurrency(amount)
+    : formatCurrency(amount)
 }
 
 /**

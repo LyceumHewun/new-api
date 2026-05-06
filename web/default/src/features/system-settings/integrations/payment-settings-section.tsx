@@ -565,7 +565,7 @@ export function PaymentSettingsSection({
                 name='Price'
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>{t('Price (local currency / USD)')}</FormLabel>
+                    <FormLabel>{t('Price (CNY / USD)')}</FormLabel>
                     <FormControl>
                       <Input
                         type='number'
@@ -579,7 +579,7 @@ export function PaymentSettingsSection({
                     </FormControl>
                     <FormDescription>
                       {t(
-                        'How much to charge for each US dollar of balance (Epay)'
+                        'How much CNY to charge for each US dollar of balance (Epay)'
                       )}
                     </FormDescription>
                     <FormMessage />
