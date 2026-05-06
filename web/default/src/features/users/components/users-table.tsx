@@ -13,11 +13,12 @@ import {
   getSortedRowModel,
   useReactTable,
 } from '@tanstack/react-table'
-import { useMediaQuery } from '@/hooks'
+import { useDebounce, useMediaQuery } from '@/hooks'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
 import { cn } from '@/lib/utils'
 import { useTableUrlState } from '@/hooks/use-table-url-state'
+import { Input } from '@/components/ui/input'
 import {
   Table,
   TableBody,
@@ -82,6 +83,19 @@ export function UsersTable() {
       { columnId: 'group', searchKey: 'group', type: 'string' },
     ],
   })
+
+  const [searchInput, setSearchInput] = useState(globalFilter ?? '')
+  const debouncedSearchInput = useDebounce(searchInput, 1200)
+
+  useEffect(() => {
+    setSearchInput(globalFilter ?? '')
+  }, [globalFilter])
+
+  useEffect(() => {
+    if (debouncedSearchInput !== (globalFilter ?? '')) {
+      onGlobalFilterChange?.(debouncedSearchInput)
+    }
+  }, [debouncedSearchInput, globalFilter, onGlobalFilterChange])
 
   // Fetch data with React Query
   const { data, isLoading, isFetching } = useQuery({
@@ -172,6 +186,15 @@ export function UsersTable() {
         <DataTableToolbar
           table={table}
           searchPlaceholder={t('Filter by username, name or email...')}
+          customSearch={
+            <Input
+              placeholder={t('Filter by username, name or email...')}
+              value={searchInput}
+              onChange={(event) => setSearchInput(event.target.value)}
+              className='h-9 w-full sm:h-8 sm:w-[150px] lg:w-[250px]'
+            />
+          }
+          onReset={() => setSearchInput('')}
           filters={[
             {
               columnId: 'status',
